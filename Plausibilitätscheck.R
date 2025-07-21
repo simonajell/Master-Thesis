@@ -17,7 +17,7 @@ calc_p_E <- function(p_C, theta_A){
   return(p_e_2)
 }
 
-### assuming the PO assumption holds
+###### assuming the PO assumption holds ####
 # Kieser,2020 Example 4.3
 # theta_A = ln(1.8)
 p_c_po <- c(0.10, 0.20, 0.10, 0.15, 0.20, 0.25)
@@ -127,7 +127,7 @@ calculate_theta_A2(p_c_po, new_p_e_po, r=1)
 calculate_theta_A3(p_c_po, new_p_e_po, r=1)
 
 
-### Function that does this for different probability vectors. and random thetas
+### Function that does this for different probability vectors. and random thetas ###
 random_simplex <- function(n) {
   success <- FALSE
   while (!success) {
@@ -156,7 +156,6 @@ theta_comparison <- function(comp_iter, vec_length, r){
   theta_results$diff <- theta_results$theta_A - theta_results$est_theta
   return(theta_results)
 }
-
 t_comp1.2 <- theta_comparison(comp_iter = 10000, vec_length = 6, r=1)
 mean(t_comp1.2$diff) # 0.00004661742 = 4.661742e-05
 median(t_comp1.2$diff) # 2.256777e-05
@@ -199,6 +198,33 @@ t_comp7 <- theta_comparison(comp_iter = 10000, vec_length = 6, r=1)
 mean(t_comp7$diff)
 plot(t_comp7$theta_A, t_comp7$diff) 
 
+# with new technique
+theta_comparison_new <- function(comp_iter, vec_length, r){
+  theta_results <- data.frame("theta_A" = c(NA), "est_theta"=c(NA), "diff" = c(NA))
+  p_c <- 0
+  p_e <- 0
+  for (i in seq_along(1:comp_iter)) {
+    set.seed(i)
+    print(i)
+    theta_random <- runif(1, min = 1, max = 5)
+    p_c <- random_simplex(n=vec_length)
+    p_e <- calc_p_E(p_C = p_c, theta_A = log(theta_random))
+    theta_results[i,1] <- log(theta_random)
+    # White method
+    theta_results[i,2] <- calculate_theta_A(p_c, p_e, r)[1,1]
+  }
+  theta_results$diff <- theta_results$theta_A - theta_results$est_theta
+  return(theta_results)
+}
+
+t_comp_new <- theta_comparison_new(comp_iter = 10000, vec_length = 6, r=1)
+mean(t_comp_new$diff) # 0.00004661742 = 4.661742e-05
+median(t_comp_new$diff) # 2.256777e-05
+plot(t_comp_new$theta_A, t_comp_new$diff) 
+plot(t_comp_new$theta_A, t_comp_new$est_theta) 
+
+
+
 ####### Variance Calculation for PO vectors ######
 
 # Compare Kieser variance to White variance:
@@ -236,8 +262,8 @@ var_comparison <- function(comp_iter, vec_length, r){
   return(var_results)
 }
 
-v_comp1 <- var_comparison(comp_iter = 1000, vec_length = 6, r=1)
-mean(v_comp1$diff) # on average a difference of -5.294556e-05
+v_comp1 <- var_comparison(comp_iter = 10000, vec_length = 6, r=1)
+mean(v_comp1$diff) # on average a difference of 1.49961e-05
 median(v_comp1$diff)
 plot(v_comp1$theta_A, v_comp1$diff) # difference between variances gets bigger with bigger thetas
 plot(v_comp1$var_w, v_comp1$var_k)
@@ -331,36 +357,54 @@ ggplot(var_comp_noPO_PO, aes(x=theta, y=diff, color=PO))+
 p_C_PO <- random_simplex(5)
 p_E_PO <- calc_p_E(p_C_PO, theta_A = log(1.8))
 
+exp(calculate_theta_A_old(p_C_PO, p_E_PO))
 samplesize_po_NN(p_C_PO, p_E_PO, alpha = 0.05, beta = 0.2, r =1)
 samplesize_po_kieser(p_C_PO, p_E_PO, alpha = 0.05, beta = 0.2, r =1)
+samplesize_po_kieser_known(p_C_PO, p_E_PO, theta = 1.8, alpha = 0.05, beta = 0.2, r =1)
+
 
 comp_PO_fullfilled <- function(alpha=0.05, beta=0.2, r=1, iter=1000, theta_A = 1.8){
   results_NN <-  data.frame()
   results_AA <-  data.frame()
   results_NA <-  data.frame()
   results_k <- data.frame()
+  results_k_known <- data.frame()
+  theta_vec <- c(NA)
   for (i in seq_along(1:iter)) {
     set.seed(i)
     prob_length <- sample(c(3,4,5,6,7,8), 1)
     print(i)
     p_C <- random_simplex(prob_length)
     p_E <- calc_p_E(p_C, theta_A = log(theta_A))
+    theta_vec[i] <- calculate_theta_A_old(p_C, p_E)
     results_NN <- rbind(results_NN, as.data.frame(samplesize_po_NN(p_C=p_C, p_E=p_E, alpha, beta, r)))
     results_AA <- rbind(results_AA, as.data.frame(samplesize_po_AA(p_C=p_C, p_E=p_E, alpha, beta, r)))
     results_NA <- rbind(results_NA, as.data.frame(samplesize_po_NA(p_C=p_C, p_E=p_E, alpha, beta, r)))
     results_k <- rbind(results_k, as.data.frame(samplesize_po_kieser(p_C=p_C, p_E=p_E, alpha, beta, r)))
+    results_k_known <- rbind(results_k_known, 
+                             as.data.frame(samplesize_po_kieser_known(p_C=p_C, p_E=p_E, theta = theta_A, alpha, beta, r)))
+    
   }
-  return(list(results_NN, results_k, results_AA, results_NA))
+  return(list(results_NN, results_k, results_AA, results_NA, results_k_known, theta_vec))
 }
 
 Samp_Size_PO_fulfilled <- comp_PO_fullfilled(iter = 10000)
 # how often is NN the same as Kieser
-length(which(Samp_Size_PO_fulfilled[[1]]$n_total == Samp_Size_PO_fulfilled[[2]]$n_total))/10000 # 99.08% , 520 unequal
+length(which(Samp_Size_PO_fulfilled[[1]]$n_total == Samp_Size_PO_fulfilled[[2]]$n_total))/10000 # 99.05% , 520 unequal
+mean(Samp_Size_PO_fulfilled[[1]]$n_total - Samp_Size_PO_fulfilled[[2]]$n_total)
 # how often is AA the same as Kieser
 length(which(Samp_Size_PO_fulfilled[[2]]$n_total == Samp_Size_PO_fulfilled[[3]]$n_total))/10000 # 0%
+mean(Samp_Size_PO_fulfilled[[3]]$n_total - Samp_Size_PO_fulfilled[[2]]$n_total)
 # how often is NA the same as Kieser
-length(which(Samp_Size_PO_fulfilled[[2]]$n_total == Samp_Size_PO_fulfilled[[4]]$n_total))/10000 # 0.53 %
+length(which(Samp_Size_PO_fulfilled[[2]]$n_total == Samp_Size_PO_fulfilled[[4]]$n_total))/10000 # 0.73 %
+mean(Samp_Size_PO_fulfilled[[4]]$n_total - Samp_Size_PO_fulfilled[[2]]$n_total)
 
+# how often is NN the same as Kieser with true theta
+length(which(Samp_Size_PO_fulfilled[[1]]$n_total == Samp_Size_PO_fulfilled[[5]]$n_total))/10000 # 78.22%
+# how often is kieser the same as Kieser with true theta
+length(which(Samp_Size_PO_fulfilled[[2]]$n_total == Samp_Size_PO_fulfilled[[5]]$n_total))/10000 # 78.25%
+
+mean(Samp_Size_PO_fulfilled[[1]]$n_total - Samp_Size_PO_fulfilled[[2]]$n_total)
 
 # vs. not fulfilled
 p <- generate_two_simplex_vectors(5, bias_strength = 1.8)

@@ -7,7 +7,28 @@ p_E2 <- c(0.15,0.3,0.1, 0.2, 0.2, 0.05)  # experimental group outcome probabilit
 p_C <- c(0.2, 0.3, 0.3, 0.2)
 p_E <- c(0.1, 0.2, 0.4, 0.3)
 
+##### Function that generates a simplex vector ####
+# Zufallsvektoren auf dem Simplex
+random_simplex <- function(n) {
+  x <- rgamma(n, shape = 1, rate = 1)  # oder shape = alpha für andere Verteilungen
+  x / sum(x)
+}
 
+# Function that generates two simplex vectors, where the second has higher values on average
+generate_two_simplex_vectors <- function(n, bias_strength = 2) {
+  # Vektor A: gleichmäßige Dirichlet-Verteilung
+  alpha_a <- rep(1, n)
+  a <- rgamma(n, shape = alpha_a, rate = 1)
+  a <- a / sum(a)
+  
+  # Vektor B: größere alpha-Werte an denselben Stellen, wo a hoch ist
+  # Das verstärkt die hohen Werte weiter
+  alpha_b <- 1 + bias_strength * a  # bias_strength steuert die Verstärkung
+  b <- rgamma(n, shape = alpha_b, rate = 1)
+  b <- b / sum(b)
+  
+  list(a = a, b = b)
+}
 
 ############# Proportional Odds Method #########################################
 # This function (adapted from Kieser 2020) will calculate the needed sample size based on p_C and p_E for proportional odds regression. A piece is still missing. Please ignore at this stage.
@@ -87,11 +108,7 @@ calculate_theta_A <- function(p_C, p_E, r = 1) {
   return(alt)
 }
 
-
-
-
-
-calculate_theta_A <- function(p_C, p_E, r = 1) {
+calculate_theta_A2 <- function(p_C, p_E, r = 1) {
   # Validate inputs
   if (length(p_C) != length(p_E)) {
     stop("p_C and p_E must have the same length (same number of outcome levels).")
@@ -273,6 +290,30 @@ samplesize_po_kieser <- function(p_C, p_E, alpha, beta, r, p_C2=NULL, p_E2=NULL)
   return(data.frame(n_total = n_total, n_E = n_E, n_C = n_C,
                     actual_r = actual_r, actual_power = actual_power, actual_power2=actual_power2))
 }
+samplesize_po_kieser_known <- function(p_C, p_E, theta, alpha, beta, r, p_C2=NULL, p_E2=NULL){
+  
+  theta_A <- log(theta)
+  x = 0
+  for (i in 1:length(p_C)){
+    x = x + ((p_C[i] + r*p_E[i]) / (1 + r))^3
+  }
+  n <- ((1+r)^2/r) * 3*((qnorm(1-alpha/2) + qnorm(1-beta))^2) /
+    (theta_A^2 * (1-x)) # Kieser Formel 4.8
+  n_E <- ceiling(r/(1+r) * n)
+  n_C <- ceiling(1/(1+r) * n)
+  n_total <- n_E + n_C
+  actual_r <- n_E/n_C
+  actual_power <- pnorm(sqrt(n_total * actual_r * theta_A^2 * (1-x)/
+                               (3 * (1 + actual_r)^2)) - qnorm(1-alpha/2))
+  actual_power2<-NA
+  if (!is.null(p_C2)&!is.null(p_E2)){
+    theta_A2 <- calculate_theta_A(p_C2, p_E2, r)[1,1]
+    actual_power2 <- pnorm(sqrt(n_total * actual_r * theta_A2^2 * (1-x)/
+                                  (3 * (1 + actual_r)^2)) - qnorm(1-alpha/2))
+  }
+  return(data.frame(n_total = n_total, n_E = n_E, n_C = n_C,
+                    actual_r = actual_r, actual_power = actual_power, actual_power2=actual_power2))
+}
 
 samplesize_po_AA(p_C=p_C, p_E=p_E, alpha = 0.05, beta = 0.2, r=1)
 samplesize_po_AA(p_C=p_C, p_E=p_E, alpha = 0.05, beta = 0.2, r=1, p_C2, p_E2)
@@ -316,27 +357,67 @@ comp_PO <- function(alpha=0.05, beta=0.2, r=1, iter=1000, bias = 1.2){
 comp_w_k <- comp_PO(iter=10000)
 # how often is NN the same as Kieser
 length(which(comp_w_k[[1]]$n_total == comp_w_k[[2]]$n_total))/10000 # 94.8% , 520 unequal
+mean(comp_w_k[[1]]$n_total - comp_w_k[[2]]$n_total)
 # how often is AA the same as Kieser
 length(which(comp_w_k[[2]]$n_total == comp_w_k[[3]]$n_total))/10000 # 0%
+mean(comp_w_k[[2]]$n_total - comp_w_k[[3]]$n_total)
 # how often is NA the same as Kieser
 length(which(comp_w_k[[2]]$n_total == comp_w_k[[4]]$n_total))/10000 # 0.53 %
+mean(comp_w_k[[4]]$n_total - comp_w_k[[2]]$n_total)
+
+# look at Power:
+mean(comp_w_k[[1]]$actual_power - comp_w_k[[2]]$actual_power)
 
 # what is the mean difference of the unequal sample sizes of Kieser and NN?
 neq <- which(comp_w_k[[1]]$n_total != comp_w_k[[2]]$n_total)
-mean(comp_w_k[[1]]$n_total[neq] - comp_w_k[[2]]$n_total[neq]) # mean difference
+mean(comp_w_k[[1]]$n_total[neq] - comp_w_k[[2]]$n_total[neq]) # mean difference of unequal sample sizes
+mean(comp_w_k[[1]]$n_total - comp_w_k[[2]]$n_total)# mean difference
+mean(comp_w_k[[1]]$n_total[neq])
 plot(comp_w_k[[1]]$n_total, comp_w_k[[2]]$n_total) 
 plot(comp_w_k[[1]]$n_total[neq], comp_w_k[[2]]$n_total[neq])
 
+# Bias = 2
 comp_w_k2 <- comp_PO(iter=10000, bias = 2)
-length(which(comp_w_k2[[1]]$n_total == comp_w_k2[[2]]$n_total))/10000
+length(which(comp_w_k2[[1]]$n_total == comp_w_k2[[2]]$n_total))/10000 # 94.04%
 neq <- which(comp_w_k2[[1]]$n_total != comp_w_k2[[2]]$n_total)
 mean(comp_w_k2[[1]]$n_total[neq] - comp_w_k2[[2]]$n_total[neq])
 plot(comp_w_k2[[1]]$n_total, comp_w_k2[[2]]$n_total)
+# look at Power:
+mean(comp_w_k2[[1]]$actual_power - comp_w_k2[[2]]$actual_power)
 
+# Bias = 3
 comp_w_k3 <- comp_PO(iter=10000, bias = 3)
-length(which(comp_w_k3[[1]]$n_total == comp_w_k3[[2]]$n_total))/10000
+length(which(comp_w_k3[[1]]$n_total == comp_w_k3[[2]]$n_total))/10000 # 93.93%
 neq <- which(comp_w_k3[[1]]$n_total != comp_w_k3[[2]]$n_total)
 mean(comp_w_k3[[1]]$n_total[neq] - comp_w_k3[[2]]$n_total[neq])
+# look at Power:
+mean(comp_w_k3[[1]]$actual_power - comp_w_k3[[2]]$actual_power)
+
+# r = 0.8
+comp_w_k4 <- comp_PO(iter=10000, r=0.8)
+length(which(comp_w_k4[[1]]$n_total == comp_w_k4[[2]]$n_total))/10000 # 31.82%
+# how often is AA the same as Kieser
+length(which(comp_w_k4[[2]]$n_total == comp_w_k4[[3]]$n_total))/10000 # 0.88%
+# how often is NA the same as Kieser
+length(which(comp_w_k4[[2]]$n_total == comp_w_k4[[4]]$n_total))/10000 # 5.36 %
+neq <- which(comp_w_k4[[1]]$n_total != comp_w_k4[[2]]$n_total)
+mean(comp_w_k4[[1]]$n_total[neq] - comp_w_k4[[2]]$n_total[neq])
+plot(comp_w_k4[[1]]$n_total, comp_w_k4[[2]]$n_total)
+# look at Power:
+mean(comp_w_k4[[1]]$actual_power - comp_w_k4[[2]]$actual_power)
+
+# r = 0.4
+comp_w_k5 <- comp_PO(iter=10000, r=0.4)
+length(which(comp_w_k5[[1]]$n_total == comp_w_k5[[2]]$n_total))/10000 # 9.94%
+# how often is AA the same as Kieser
+length(which(comp_w_k5[[2]]$n_total == comp_w_k5[[3]]$n_total))/10000 # 1.75%
+# how often is NA the same as Kieser
+length(which(comp_w_k5[[2]]$n_total == comp_w_k5[[4]]$n_total))/10000 # 5.47 %
+neq <- which(comp_w_k5[[1]]$n_total != comp_w_k5[[2]]$n_total)
+mean(comp_w_k5[[1]]$n_total[neq] - comp_w_k5[[2]]$n_total[neq])
+plot(comp_w_k5[[1]]$n_total, comp_w_k5[[2]]$n_total)
+# look at Power:
+mean(comp_w_k5[[1]]$actual_power - comp_w_k5[[2]]$actual_power)
 
 ############# Wilcoxon- Mann- Whitney Method ###################################
 # This function calculates pi_A based on p_E and p_C
@@ -574,7 +655,7 @@ c(mean(test500$n_needed[,1]<test500$n_needed[,2]), mean(test500$n_needed[,2]<tes
 mean(test500$actual_power_nmin)
 median(test500$actual_power_nmin)
 hist(test500$actual_power_nmin)
-plot(test500$actual_power_nmin, type = 'p', col = factor(test200$method))
+plot(test500$actual_power_nmin, type = 'p', col = factor(test500$method))
 legend("topleft", legend = levels(factor(test500$method)), 
        pch = 19, col = factor(levels(factor(test500$method))))
 df500 <- data.frame("power_nmin" = test500$actual_power_nmin, "method" = test500$method)
@@ -698,10 +779,18 @@ settings <- function(n_vector, p_C, p_E, r, niter){
 sim_small_test <- settings(n_vector = c(seq(150,1000,50), seq(1500, 12000, 500)),
                            p_C, p_E, r, niter=10000)
 ggplot(sim_small_test[[1]], aes(x=n_pilot, y=nmin_power)) +
-  geom_point()
+  geom_point()+
+  geom_hline(yintercept=0.8, color = "red")
 ggplot(sim_small_test[[2]], aes(x=n_pilot, y=min_n, color = method)) +
   geom_point()
 length(which(sim_small_test[[2]]$method =="PO"))/nrow(sim_small_test[[2]])
+
+
+ggplot(sim_small_test[[2]], aes(x=n_pilot, y=min_n_power, color = method)) +
+  geom_point()+
+  geom_point(data = sim_small_test[[1]], mapping = aes(x = n_pilot, y = nmin_power), color="blue")+
+  geom_hline(yintercept=0.8, color = "red")
+
 
 sim_test <- settings(n_vector = c(seq(150,1000,50), seq(1500, 12000, 500)), p_C, p_E, r, niter = 1000)
 ggplot(sim_test[[1]], aes(x=n_pilot, y=nmin_power)) +
@@ -759,34 +848,12 @@ sim_test3 <- settings(n_vector = c(seq(150,1000,50), seq(1500, 12000, 500)), p_C
 ggplot(sim_test3, aes(x=nmin_power, y=n_pilot)) +
   geom_point()
 
-
-##### Function that generates a simplex vector ####
-# Zufallsvektoren auf dem Simplex
-random_simplex <- function(n) {
-  x <- rgamma(n, shape = 1, rate = 1)  # oder shape = alpha für andere Verteilungen
-  x / sum(x)
-}
 p_C_4 <- random_simplex(6)
 p_E_4 <- random_simplex(6)
 sim_test4 <- settings(n_min = 100, n_max = 10000, steps = 100 , p_C_4, p_E_4, r, niter = 1000)
 ggplot(sim_test4, aes(x=nmin_power, y=n_pilot)) +
   geom_point()
 
-# Function that generates two simplex vectors, where the second has higher values on average
-generate_two_simplex_vectors <- function(n, bias_strength = 2) {
-  # Vektor A: gleichmäßige Dirichlet-Verteilung
-  alpha_a <- rep(1, n)
-  a <- rgamma(n, shape = alpha_a, rate = 1)
-  a <- a / sum(a)
-  
-  # Vektor B: größere alpha-Werte an denselben Stellen, wo a hoch ist
-  # Das verstärkt die hohen Werte weiter
-  alpha_b <- 1 + bias_strength * a  # bias_strength steuert die Verstärkung
-  b <- rgamma(n, shape = alpha_b, rate = 1)
-  b <- b / sum(b)
-  
-  list(a = a, b = b)
-}
 
 p_5 <- generate_two_simplex_vectors(6)
 p_C_5 <- p_5[[1]]
