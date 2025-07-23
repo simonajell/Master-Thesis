@@ -1,6 +1,7 @@
 ## Try to reproduce ologit in R
 library(MASS)
 library(ggplot2)
+library(tidyr)
 
 p_C2 <- c(0.3,0.2,0.15,0.2, 0.1, 0.05)  # control group outcome probabilities
 p_E2 <- c(0.15,0.3,0.1, 0.2, 0.2, 0.05)  # experimental group outcome probabilities
@@ -10,9 +11,20 @@ p_E <- c(0.1, 0.2, 0.4, 0.3)
 ##### Function that generates a simplex vector ####
 # Zufallsvektoren auf dem Simplex
 random_simplex <- function(n) {
-  x <- rgamma(n, shape = 1, rate = 1)  # oder shape = alpha für andere Verteilungen
+  x <- rgamma(5, shape = 1, rate = 1)  # oder shape = alpha für andere Verteilungen
   x / sum(x)
 }
+
+normal_simplex <- function(n, favored_cat) {
+  x <- seq(1, n, by = 1)
+  y <- dnorm(x, mean =  x[favored_cat], sd = 2.5)
+  noise <- runif(n, min = 0.8, max = 1.2) # Add random noise (for example, 10% variation)
+  y_noisy <- y * noise  # Apply noise and normalize
+  y1 <- y_noisy/sum(y_noisy)
+  plot(x,y1)
+  return(y1)
+}
+normal_simplex(6, 4)
 
 # Function that generates two simplex vectors, where the second has higher values on average
 generate_two_simplex_vectors <- function(n, bias_strength = 2) {
@@ -370,11 +382,11 @@ mean(comp_w_k[[1]]$actual_power - comp_w_k[[2]]$actual_power)
 
 # what is the mean difference of the unequal sample sizes of Kieser and NN?
 neq <- which(comp_w_k[[1]]$n_total != comp_w_k[[2]]$n_total)
-mean(comp_w_k[[1]]$n_total[neq] - comp_w_k[[2]]$n_total[neq]) # mean difference of unequal sample sizes
-mean(comp_w_k[[1]]$n_total - comp_w_k[[2]]$n_total)# mean difference
-mean(comp_w_k[[1]]$n_total[neq])
-plot(comp_w_k[[1]]$n_total, comp_w_k[[2]]$n_total) 
-plot(comp_w_k[[1]]$n_total[neq], comp_w_k[[2]]$n_total[neq])
+mean(abs(comp_w_k[[1]]$n_total[neq] - comp_w_k[[2]]$n_total[neq])) # mean abs difference of unequal sample sizes
+mean(abs(comp_w_k[[1]]$n_total - comp_w_k[[2]]$n_total))# mean abs difference: 44.85
+median(comp_w_k[[1]]$n_total - comp_w_k[[2]]$n_total)# median abs difference = 0
+mean(comp_w_k[[1]]$n_total[neq]) # mean NN sample size of unequal pairs
+
 
 # Bias = 2
 comp_w_k2 <- comp_PO(iter=10000, bias = 2)
@@ -869,3 +881,113 @@ sim_test6 <- settings(n_vector = c(seq(150,1000,50), seq(1500, 12000, 500)), p_C
 ggplot(sim_test6, aes(x=n_pilot, y=nmin_power)) +
   geom_point()
 # -> weniger Schwankungen
+
+##### Compare Methods with normally distributed Prob. #####
+set.seed(10)
+p_C_norm <- normal_simplex(6,4)
+p_C_norm
+set.seed(22)
+p_E_norm <- normal_simplex(6,3.5)
+p_E_norm
+
+test50_norm <-simulation(p_C_norm,p_E_norm,n_pilot=50,niter=10000)
+mean(test50_norm$n_needed[,1]<test50_norm$n_needed[,2]) #how often n calculated by AfS is smaller than n calculated by ttestord
+mean(test50_norm$n_needed[,2]<test50_norm$n_needed[,3])
+mean(test50_norm$n_needed[,1]<test50_norm$n_needed[,3])
+# which Method calculated the minimal sample size overall
+colnames(test50_norm$n_needed)[which(as.matrix(test50_norm$n_needed) == min(test50_norm$n_needed), arr.ind = TRUE)[1,2]]
+mean(test50_norm$actual_power_nmin)
+median(test50_norm$actual_power_nmin)
+hist(test50_norm$actual_power_nmin)
+plot(test50_norm$actual_power_nmin, type = 'p', col = factor(test50_norm$method))
+legend("topleft", legend = levels(factor(test50_norm$method)), 
+       pch = 19, col = factor(levels(factor(test50_norm$method))))
+df50_norm <- data.frame("power_nmin" = test50_norm$actual_power_nmin, "method" = test50_norm$method)
+ggplot(df50_norm, aes(x = power_nmin, fill = method, colour = method)) + 
+  geom_histogram(alpha = 0.3, position = "identity")
+df50_power_norm <- as.data.frame(test50_norm$actual_power) %>%
+  pivot_longer(cols = AfS:po, values_to = "power", names_to = "method")
+ggplot(df50_power_norm, aes(x = power, fill = method, colour = method)) + 
+  geom_histogram(alpha = 0.3, position = "identity")
+
+test500_norm<-simulation(p_C_norm,p_E_norm,n_pilot=500,niter=10000)
+mean(test500_norm$n_needed[,1]<test500_norm$n_needed[,2])     # how often n calculated by AfS is smaller than n calculated by ttestord
+mean(test500_norm$n_needed[,2]<test500_norm$n_needed[,3])     # how often n calculated by ttest is smaller than n calculated by PO
+mean(test500_norm$n_needed[,1]<test500_norm$n_needed[,3])     # how often n calculated by AfS is smaller than n calculated by PO
+c(mean(test500_norm$n_needed[,1]<test500_norm$n_needed[,2]),
+  mean(test500_norm$n_needed[,2]<test500_norm$n_needed[,3]), 
+  mean(test500_norm$n_needed[,1]<test500_norm$n_needed[,3]))
+mean(test500_norm$actual_power_nmin)
+median(test500_norm$actual_power_nmin)
+hist(test500_norm$actual_power_nmin)
+plot(test500_norm$actual_power_nmin, type = 'p', col = factor(test500_norm$method))
+legend("topleft", legend = levels(factor(test500_norm$method)), 
+       pch = 19, col = factor(levels(factor(test500_norm$method))))
+df500_norm <- data.frame("power_nmin" = test500_norm$actual_power_nmin, "method" = test500_norm$method)
+ggplot(df500_norm, aes(x = power_nmin, fill = method, colour = method)) + 
+  geom_histogram(alpha = 0.3, position = "identity")
+length(which(test500_norm$method == "PO"))/10000
+length(which(test500_norm$method == "ttest"))/10000
+length(which(test500_norm$method == "AfS"))/10000
+
+test1000_norm<-simulation(p_C_norm, p_E_norm, n_pilot=1000, niter=10000)
+mean(test1000_norm$n_needed[,1]<test1000_norm$n_needed[,2])
+mean(test1000_norm$actual_power_nmin)
+hist(test1000_norm$actual_power_nmin)
+# Plot of minimal sample size per Method
+df1000_norm_nmin <- data.frame("nmin" = test1000_norm$nmin, "method" = test1000_norm$method)
+ggplot(df1000_norm_nmin, aes(x = nmin, fill = method, colour = method)) + 
+  geom_histogram(alpha = 0.3, position = "identity")+
+  xlim(0,10000)
+
+plot(test1000_norm$actual_power_nmin, type = 'p', col = factor(test1000_norm$method))
+legend("topleft", legend = levels(factor(test1000_norm$method)), 
+       pch = 19, col = factor(levels(factor(test1000_norm$method))))
+# Plot of minimal power per Method
+df1000_norm <- data.frame("power_nmin" = test1000_norm$actual_power_nmin, "method" = test1000_norm$method)
+ggplot(df1000_norm, aes(x = power_nmin, fill = method, colour = method)) + 
+  geom_histogram(alpha = 0.3, position = "identity")
+length(which(test1000_norm$method == "PO"))/10000
+length(which(test1000_norm$method == "ttest"))/10000
+length(which(test1000_norm$method == "AfS"))/10000
+
+#plot the actual_powers of the methods
+hist(test1000_norm$actual_power[,1])
+hist(test1000_norm$actual_power[,2])
+hist(test1000_norm$actual_power[,3])
+### now layer them
+df1000_power_norm <- as.data.frame(test1000_norm$actual_power) %>%
+  pivot_longer(cols = AfS:po, values_to = "power", names_to = "method")
+ggplot(df1000_power_norm, aes(x = power, fill = method, colour = method)) + 
+  geom_histogram(alpha = 0.3, position = "identity")
+
+
+# n_pilot = 5000
+test5000_norm<-simulation(p_C_norm, p_E_norm, n_pilot=5000, niter=10000)
+mean(test5000_norm$n_needed[,1]<test5000_norm$n_needed[,2])
+mean(test5000_norm$actual_power_nmin)
+hist(test5000_norm$actual_power_nmin)
+plot(test5000_norm$actual_power_nmin, type = 'p', col = factor(test5000_norm$method))
+legend("topleft", legend = levels(factor(test5000_norm$method)), 
+       pch = 19, col = factor(levels(factor(test5000_norm$method))))
+df5000_norm <- data.frame("power_nmin" = test5000_norm$actual_power_nmin, "method" = test5000_norm$method)
+ggplot(df5000_norm, aes(x = power_nmin, fill = method, colour = method)) + 
+  geom_histogram(alpha = 0.3, position = "identity")
+length(which(test5000_norm$method == "PO"))/10000
+length(which(test5000_norm$method == "ttest"))/10000
+length(which(test5000_norm$method == "AfS"))/10000
+
+# n_pilot=10000
+test10000_norm<-simulation(p_C_norm, p_E_norm, n_pilot=10000, niter=10000)
+mean(test10000_norm$n_needed[,1]<test10000_norm$n_needed[,2])
+mean(test10000_norm$actual_power_nmin)
+hist(test10000_norm$actual_power_nmin)
+plot(test10000_norm$actual_power_nmin, type = 'p', col = factor(test10000_norm$method))
+legend("topleft", legend = levels(factor(test10000_norm$method)), 
+       pch = 19, col = factor(levels(factor(test10000_norm$method))))
+df10000_norm <- data.frame("power_nmin" = test10000_norm$actual_power_nmin, "method" = test10000_norm$method)
+ggplot(df10000_norm, aes(x = power_nmin, fill = method, colour = method)) + 
+  geom_histogram(alpha = 0.3, position = "identity")
+length(which(test10000_norm$method == "PO"))/10000
+length(which(test10000_norm$method == "ttest"))/10000
+length(which(test10000_norm$method == "AfS"))/10000

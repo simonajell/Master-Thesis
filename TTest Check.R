@@ -13,11 +13,15 @@ comp_ttest <- function(alpha = 0.05, beta = 0.2, r = 1, iter = 1000, bias = 1.2)
     results_me <- rbind(results_me, ttest$actual_power)
     
     del_sig <- calculate_delta_A_sigma(p_C, p_E)
-    results_R <- c(results_R, power.t.test(n=ttest$n_E, delta = del_sig$delta_A,
+    results_R <- c(results_R, power.t.test(n=ttest$n_E, delta = del_sig$delta_A, power = NULL,
                  sd = del_sig$sigma, alternative = "two.sided", type = "two.sample")$power)
         }
  return(data.frame("ttestord"=results_me, "R"=results_R)) 
 }
+
+power.t.test(delta = del_sig$delta_A, power = 0.8, sig.level = 0.05, 
+             sd = del_sig$sigma, alternative = "two.sided", type = "two.sample")
+
 comp_ttest1 <- comp_ttest(iter = 1000)
 mean(comp_ttest1$ttestord -comp_ttest1$R)
 ggplot(data=comp_ttest1, aes(x=ttestord, y=R))+

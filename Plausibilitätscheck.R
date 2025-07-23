@@ -17,7 +17,7 @@ calc_p_E <- function(p_C, theta_A){
   return(p_e_2)
 }
 
-###### assuming the PO assumption holds ####
+###### Theta: assuming the PO assumption holds ####
 # Kieser,2020 Example 4.3
 # theta_A = ln(1.8)
 p_c_po <- c(0.10, 0.20, 0.10, 0.15, 0.20, 0.25)
@@ -153,50 +153,56 @@ theta_comparison <- function(comp_iter, vec_length, r){
     # White method
     theta_results[i,2] <- calculate_theta_A_old(p_c, p_e, r)[1,1]
   }
-  theta_results$diff <- theta_results$theta_A - theta_results$est_theta
+  theta_results$diff <- abs(theta_results$theta_A - theta_results$est_theta)
   return(theta_results)
 }
+
 t_comp1.2 <- theta_comparison(comp_iter = 10000, vec_length = 6, r=1)
-mean(t_comp1.2$diff) # 0.00004661742 = 4.661742e-05
-median(t_comp1.2$diff) # 2.256777e-05
+mean(t_comp1.2$diff) # 0.000512
+median(t_comp1.2$diff) # 0.00033
 plot(t_comp1.2$theta_A, t_comp1.2$diff) 
-plot(t_comp1.2$theta_A, t_comp1.2$est_theta) 
+plot(t_comp1.2$theta_A, t_comp1.2$theta_A-t_comp1.2$est_theta) 
 
 
 #for r=0.8
 t_comp2 <- theta_comparison(comp_iter = 10000, vec_length = 6, r=0.8)
-mean(t_comp2$diff)
+mean(t_comp2$diff) # 0.00054
+median(t_comp2$diff) # 0.00034
 plot(t_comp2$theta_A, t_comp2$diff) 
+plot(t_comp2$theta_A, t_comp2$theta_A-t_comp2$est_theta) 
+
 
 # for r=0.4
 t_comp3 <- theta_comparison(comp_iter = 10000, vec_length = 6, r=0.4)
-mean(t_comp3$diff)
+mean(t_comp3$diff) # 0.00066
+median(t_comp3$diff) # 0.00042
 plot(t_comp3$theta_A, t_comp3$diff) 
+plot(t_comp3$theta_A, t_comp3$theta_A-t_comp3$est_theta) 
+
 
 # for r=0.2
 t_comp8 <- theta_comparison(comp_iter = 10000, vec_length = 6, r=0.2)
-mean(t_comp8$diff)
+mean(t_comp8$diff) # 0.00095
+median(t_comp8$diff) # 0.00065
 plot(t_comp8$theta_A, t_comp8$diff) 
+plot(t_comp8$theta_A, t_comp8$theta_A-t_comp8$est_theta) 
+
 
 # for vec_length = 4
-t_comp4 <- theta_comparison(comp_iter = 1000, vec_length = 4, r=1)
-mean(t_comp4$diff)
+t_comp4 <- theta_comparison(comp_iter = 10000, vec_length = 4, r=1)
+mean(t_comp4$diff) # 0.0005
 plot(t_comp4$theta_A, t_comp4$diff) 
 
 # for vec_length = 3
 t_comp5 <- theta_comparison(comp_iter = 10000, vec_length = 3, r=1)
-mean(t_comp5$diff)
+mean(t_comp5$diff) # 0.00043
 plot(t_comp5$theta_A, t_comp5$diff) 
 
 # for vec_length = 8
 t_comp6 <- theta_comparison(comp_iter = 10000, vec_length = 8, r=1) 
-mean(t_comp6$diff)
+mean(t_comp6$diff) # 0.00053
 plot(t_comp6$theta_A, t_comp6$diff) 
 
-# with 10000 iterations
-t_comp7 <- theta_comparison(comp_iter = 10000, vec_length = 6, r=1)
-mean(t_comp7$diff)
-plot(t_comp7$theta_A, t_comp7$diff) 
 
 # with new technique
 theta_comparison_new <- function(comp_iter, vec_length, r){
@@ -213,15 +219,15 @@ theta_comparison_new <- function(comp_iter, vec_length, r){
     # White method
     theta_results[i,2] <- calculate_theta_A(p_c, p_e, r)[1,1]
   }
-  theta_results$diff <- theta_results$theta_A - theta_results$est_theta
+  theta_results$diff <- abs(theta_results$theta_A - theta_results$est_theta)
   return(theta_results)
 }
 
 t_comp_new <- theta_comparison_new(comp_iter = 10000, vec_length = 6, r=1)
-mean(t_comp_new$diff) # 0.00004661742 = 4.661742e-05
-median(t_comp_new$diff) # 2.256777e-05
+mean(t_comp_new$diff) # 7.10 e-05
+median(t_comp_new$diff) # 1.02 e-05
 plot(t_comp_new$theta_A, t_comp_new$diff) 
-plot(t_comp_new$theta_A, t_comp_new$est_theta) 
+plot(t_comp_new$theta_A, t_comp_new$theta_A - t_comp_new$est_theta) 
 
 
 
@@ -258,15 +264,15 @@ var_comparison <- function(comp_iter, vec_length, r){
     }
     var_results[i,3] <- ((1+r)^2/r)* (3/(1-x))
   }
-  var_results$diff <- var_results$var_w - var_results$var_k
+  var_results$diff <- abs(var_results$var_w - var_results$var_k)
   return(var_results)
 }
 
 v_comp1 <- var_comparison(comp_iter = 10000, vec_length = 6, r=1)
-mean(v_comp1$diff) # on average a difference of 1.49961e-05
-median(v_comp1$diff)
+mean(v_comp1$diff) # on average a difference of 0.00067
+median(v_comp1$diff) # 0.00031
 plot(v_comp1$theta_A, v_comp1$diff) # difference between variances gets bigger with bigger thetas
-plot(v_comp1$var_w, v_comp1$var_k)
+plot(v_comp1$var_w,  v_comp1$var_w - v_comp1$var_k)
 
 # for vec_length = 4
 v_comp2 <- var_comparison(comp_iter = 1000, vec_length = 4, r=1)
@@ -412,3 +418,27 @@ p_C_no_PO <- p[[1]]
 p_E_no_PO <- p[[2]]
 
 samplesize_po_NN(p_C_no_PO, p_E_no_PO, alpha = 0.05, beta = 0.2, r =1)
+
+
+####### Sample Size Calculation when PO fulfilled and categories are normally distributed #####
+comp_PO_fullfilled <- function(alpha=0.05, beta=0.2, r=1, iter=1000, theta_A = 1.8){
+  results_NN <-  data.frame()
+  results_NN <-  data.frame()
+  theta_vec <- c(NA)
+  for (i in seq_along(1:iter)) {
+    set.seed(i)
+    prob_length <- sample(c(3,4,5,6,7,8), 1)
+    print(i)
+    p_C <- random_simplex(prob_length)
+    p_E <- calc_p_E(p_C, theta_A = log(theta_A))
+    theta_vec[i] <- calculate_theta_A_old(p_C, p_E)
+    results_NN <- rbind(results_NN, as.data.frame(samplesize_po_NN(p_C=p_C, p_E=p_E, alpha, beta, r)))
+    results_AA <- rbind(results_AA, as.data.frame(samplesize_po_AA(p_C=p_C, p_E=p_E, alpha, beta, r)))
+    results_NA <- rbind(results_NA, as.data.frame(samplesize_po_NA(p_C=p_C, p_E=p_E, alpha, beta, r)))
+    results_k <- rbind(results_k, as.data.frame(samplesize_po_kieser(p_C=p_C, p_E=p_E, alpha, beta, r)))
+    results_k_known <- rbind(results_k_known, 
+                             as.data.frame(samplesize_po_kieser_known(p_C=p_C, p_E=p_E, theta = theta_A, alpha, beta, r)))
+    
+  }
+  return(list(results_NN, results_k, results_AA, results_NA, results_k_known, theta_vec))
+}
