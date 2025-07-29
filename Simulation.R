@@ -17,14 +17,16 @@ random_simplex <- function(n) {
 
 normal_simplex <- function(n, favored_cat) {
   x <- seq(1, n, by = 1)
-  y <- dnorm(x, mean =  x[favored_cat], sd = 2.5)
-  noise <- runif(n, min = 0.8, max = 1.2) # Add random noise (for example, 10% variation)
+  y <- dnorm(x, mean =  x[favored_cat], sd = 1.8)
+  noise <- runif(n, min = 0.15, max = 0.3) # Add random noise (for example, 10% variation)
   y_noisy <- y * noise  # Apply noise and normalize
   y1 <- y_noisy/sum(y_noisy)
+  y <- y/sum(y)
+  plot(x,y)
   plot(x,y1)
-  return(y1)
+  return(list(y,y1))
 }
-normal_simplex(6, 4)
+
 
 # Function that generates two simplex vectors, where the second has higher values on average
 generate_two_simplex_vectors <- function(n, bias_strength = 2) {
@@ -42,6 +44,15 @@ generate_two_simplex_vectors <- function(n, bias_strength = 2) {
   list(a = a, b = b)
 }
 
+##### Function that generates a simplex vector with a uniform distribution ####
+uniform_simplex <- function(n) {
+  uni <- rep(1/n, n)
+  noise <- runif(n, min = 0.7, max = 0.9) # Add random noise (for example, 10% variation)
+  uni_noisy <- uni * noise  # Apply noise and normalize
+  uni_noisy <- uni_noisy/sum(uni_noisy)
+  return(list(uni, uni_noisy))
+}
+uniform_simplex(4)
 ############# Proportional Odds Method #########################################
 # This function (adapted from Kieser 2020) will calculate the needed sample size based on p_C and p_E for proportional odds regression. A piece is still missing. Please ignore at this stage.
 # calculate theta_A with artcat (Ian Whites) method
@@ -883,11 +894,11 @@ ggplot(sim_test6, aes(x=n_pilot, y=nmin_power)) +
 # -> weniger Schwankungen
 
 ##### Compare Methods with normally distributed Prob. #####
-set.seed(10)
+set.seed(1)
 p_C_norm <- normal_simplex(6,4)
 p_C_norm
-set.seed(22)
-p_E_norm <- normal_simplex(6,3.5)
+set.seed(2)
+p_E_norm <- normal_simplex(6,4)
 p_E_norm
 
 test50_norm <-simulation(p_C_norm,p_E_norm,n_pilot=50,niter=10000)
