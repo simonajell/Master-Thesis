@@ -2,6 +2,7 @@
 library(MASS)
 library(ggplot2)
 library(tidyr)
+library(dplyr)
 
 p_C2 <- c(0.3,0.2,0.15,0.2, 0.1, 0.05)  # control group outcome probabilities
 p_E2 <- c(0.15,0.3,0.1, 0.2, 0.2, 0.05)  # experimental group outcome probabilities
@@ -30,19 +31,36 @@ normal_simplex <- function(n, favored_cat) {
 
 # Function that generates two simplex vectors, where the second has higher values on average
 generate_two_simplex_vectors <- function(n, bias_strength = 2) {
-  # Vektor A: gleichmäßige Dirichlet-Verteilung
+  # Vector A: Gamma Distribution
   alpha_a <- rep(1, n)
   a <- rgamma(n, shape = alpha_a, rate = 1)
   a <- a / sum(a)
   
-  # Vektor B: größere alpha-Werte an denselben Stellen, wo a hoch ist
-  # Das verstärkt die hohen Werte weiter
-  alpha_b <- 1 + bias_strength * a  # bias_strength steuert die Verstärkung
+  # Vektor B: bigger alpha-values where a has high values
+  # this reinforces high values
+  alpha_b <- 1 + bias_strength * a  # bias_strength controls amplification
   b <- rgamma(n, shape = alpha_b, rate = 1)
   b <- b / sum(b)
   
   list(a = a, b = b)
 }
+
+
+
+generate_two_simplex_vectors_random <- function(n) {
+  # Vector A: Gamma Distribution
+  alpha_a <- rep(1, n)
+  a <- rgamma(n, shape = alpha_a, rate = 1)
+  a <- a / sum(a)
+  
+  # Vektor B: a with noise
+  noise <- runif(n, min = 0.15, max = 0.3) # Add random noise (for example, 10% variation)
+  a_noisy <- a * noise  # Apply noise and normalize
+  b <- a_noisy/sum(a_noisy)
+
+  list(a = a, b = b)
+}
+
 
 ##### Function that generates a simplex vector with a uniform distribution ####
 uniform_simplex <- function(n) {
@@ -52,7 +70,7 @@ uniform_simplex <- function(n) {
   uni_noisy <- uni_noisy/sum(uni_noisy)
   return(list(uni, uni_noisy))
 }
-uniform_simplex(4)
+uniform_simplex(6)
 ############# Proportional Odds Method #########################################
 # This function (adapted from Kieser 2020) will calculate the needed sample size based on p_C and p_E for proportional odds regression. A piece is still missing. Please ignore at this stage.
 # calculate theta_A with artcat (Ian Whites) method
