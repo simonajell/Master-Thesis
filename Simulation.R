@@ -189,13 +189,6 @@ calculate_theta_A2 <- function(p_C, p_E, r = 1) {
   return(alt)
 }
 
-calculate_theta_A(p_C = p_C, p_E=p_E, r=1)
-calculate_theta_A(p_C=c(0.1,0.2,0.4,0.2, 0.1), p_E=c(0.15,0.35,0.1, 0.2, 0.2), r=1)
-calculate_theta_A_old(p_C=c(0.1,0.2,0.4,0.2, 0.1), p_E=c(0.15,0.35,0.1, 0.2, 0.2), r=1)
-calculate_theta_A2(p_C=c(0.1,0.2,0.4,0.2, 0.1), p_E=c(0.15,0.35,0.1, 0.2, 0.2), r=1)
-calculate_theta_A(p_C=c(0.3,0.2,0.15,0.2, 0.1, 0.05), p_E=c(0.15,0.3,0.1, 0.2, 0.2, 0.05), r=1)
-calculate_theta_A(p_C=random_simplex(3), p_E=random_simplex(3), r=1)
-
 calculate_theta_N <- function(p_C, p_E, r = 1) {
   # Null Hypothesis states: theta=0
   # Validate inputs
@@ -236,10 +229,6 @@ calculate_theta_N <- function(p_C, p_E, r = 1) {
   null <- data.frame("coef" = coef_null, "Var" = var_null)
   return(null)
 }
-
-calculate_theta_N(p_C = p_C, p_E=p_E, r=1)
-calculate_theta_N(p_C=c(0.1,0.2,0.4,0.2, 0.1), p_E=c(0.15,0.35,0.1, 0.2, 0.2), r=1)
-calculate_theta_N(p_C=c(0.3,0.2,0.15,0.2, 0.1, 0.05), p_E=c(0.15,0.3,0.1, 0.2, 0.2, 0.05), r=1)
 
 
 samplesize_po_AA <- function(p_C, p_E, alpha, beta, r, p_C2=NULL, p_E2=NULL){
@@ -613,7 +602,7 @@ length(which(c_ttest_2[[1]]$n_total == c_ttest_2[[2]]$n_total))/10000 # for r=0.
 # probability vectors p_C and p_E in the control and experimental arms, respectively, and returns the 
 # resulting estimates for p_C and p_E.
 generate.pEpC.estimate<-function(p_C, p_E, r, n_pilot){
-  y<-rbinom(n_pilot,1,r/(r+1))  
+  y <- rbinom(n_pilot,1,r/(r+1))  
   n_E <- sum(y)
   n_C <- n_pilot - n_E
   phat_C <- as.vector(rmultinom(1, size=n_C, prob=p_C)/n_C)

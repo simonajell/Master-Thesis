@@ -139,6 +139,9 @@ random_simplex <- function(n) {
   return(x)
 }
 
+
+
+
 theta_comparison <- function(comp_iter, vec_length, r){
   theta_results <- data.frame("theta_A" = c(NA), "est_theta"=c(NA), "diff" = c(NA))
   p_c <- 0
@@ -158,7 +161,7 @@ theta_comparison <- function(comp_iter, vec_length, r){
 }
 
 t_comp1.2 <- theta_comparison(comp_iter = 10000, vec_length = 6, r=1)
-mean(t_comp1.2$diff) # 0.000512
+mean(t_comp1.2$diff) # 0.000516
 median(t_comp1.2$diff) # 0.00033
 plot(t_comp1.2$theta_A, t_comp1.2$diff) 
 plot(t_comp1.2$theta_A, t_comp1.2$theta_A-t_comp1.2$est_theta) 
@@ -272,7 +275,7 @@ v_comp1 <- var_comparison(comp_iter = 10000, vec_length = 6, r=1)
 mean(v_comp1$diff) # on average a difference of 0.00067
 median(v_comp1$diff) # 0.00031
 plot(v_comp1$theta_A, v_comp1$diff) # difference between variances gets bigger with bigger thetas
-plot(v_comp1$var_w,  v_comp1$var_w - v_comp1$var_k)
+plot(v_comp1$var_w,  abs(v_comp1$var_w - v_comp1$var_k))
 
 # for vec_length = 4
 v_comp2 <- var_comparison(comp_iter = 1000, vec_length = 4, r=1)

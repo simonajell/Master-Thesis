@@ -65,49 +65,77 @@ ggplot(df_sim_r, aes(x = power_nmin, fill = method, colour = method))+
   theme_bw()
 
 
+## for small n_pilot, to see what it looks like in a scenario with sample size hacking
+sim_r_small <- vary_r(p_C, p_E, n_pilot = 500)
+
+mean_sim_r_small <- c()
+for (i in seq_along(1:length(sim_r_small))) {
+  mean_sim_r_small[[i]] <- mean(sim_r_small[[i]]$actual_power_nmin)
+}
+mean_sim_r_small
+
+
+# show all histograms
+df_sim_r_small <- data.frame()
+for (i in seq_along(1:length(sim_r_small))) {
+  df <- data.frame("power_nmin" = sim_r_small[[i]]$actual_power_nmin, 
+                   "method" = sim_r_small[[i]]$method,
+                   "r"=c(0.2, 0.4, 0.6, 0.8, 1)[i])
+  df_sim_r_small <- rbind(df_sim_r_small,df)
+}
+df_sim_r_small <- df_sim_r_small %>% group_by(r) %>%  mutate(mean = mean(power_nmin))
+
+ggplot(df_sim_r_small, aes(x = power_nmin))+ 
+  facet_grid(r ~.) +
+  geom_histogram(fill = "grey", color = "black", position = "identity")+
+  geom_vline(aes(xintercept = mean, group = r), color = "red")+
+  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+  theme_bw()
+# separate by method
+ggplot(df_sim_r_small, aes(x = power_nmin, fill = method, colour = method))+ 
+  facet_grid(r ~.) +
+  geom_histogram(alpha = 0.3, position = "identity")+
+  geom_vline(aes(xintercept = mean, group = r), color = "red")+
+  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+  theme_bw()
+
 ### vary p_C and p_E #####
-## vary bias
-vary_p_bias <- function(n_pilot = 1000, niter = 10000, r = 1, cat = 6){
-  bias_vec <- seq(0.1, 2.1, 0.2)
+## vary effect size theta
+vary_p_theta <- function(n_pilot = 1000, niter = 10000, r = 1, cat = 6){
+  theta_vec <- log(seq(1.1, 2.5, 0.1))
   p_results <- data.frame()
-  results <- vector(mode = "list", length = length(bias_vec))
-  for (i in seq_along(bias_vec)) {
-    set.seed(2)
-    p <- generate_two_simplex_vectors(cat, bias = bias_vec[i])
-    p_C1 <- p[[1]]
-    p_E1 <- p[[2]]
+  results <- vector(mode = "list", length = length(theta_vec))
+  for (i in seq_along(theta_vec)) {
+    set.seed(1)
+    p_C1 <- uniform_simplex(cat)[[1]]
+    p_E1 <- calc_p_E(p_C1, theta_A = theta_vec[i])
     sim <- simulation(p_C1, p_E1, n_pilot=n_pilot, niter=niter, r=r)
     results[[i]] <- sim
   }
   return(results)
 }
 
-sim_p_bias <- vary_p_bias(n_pilot = 10000)
-
-mean_sim_p_bias <- c()
-for (i in seq_along(1:length(sim_p_bias))) {
-  mean_sim_p_bias[[i]] <- mean(sim_p_bias[[i]]$actual_power_nmin)
-}
-mean_sim_p_bias
+sim_p_theta <- vary_p_theta(n_pilot = 1000)
 
 # show all histograms
-df_sim_p_bias <- data.frame()
-for (i in seq_along(1:length(sim_p_bias))) {
-  df <- data.frame("power_nmin" = sim_p_bias[[i]]$actual_power_nmin, 
-                   "method" = sim_p_bias[[i]]$method,
-                   "p" = c(seq(0.1, 2.1, 0.2))[i])
-  df_sim_p_bias <- rbind(df_sim_p_bias,df)
+df_sim_p_theta <- data.frame()
+for (i in seq_along(1:length(sim_p_theta))) {
+  df <- data.frame("power_nmin" = sim_p_theta[[i]]$actual_power_nmin, 
+                   "method" = sim_p_theta[[i]]$method,
+                   "p" = paste0("log(",seq(1.1, 2.5, 0.1), ")")[i])
+  df_sim_p_theta <- rbind(df_sim_p_theta,df)
 }
-df_sim_p_bias <- df_sim_p_bias %>% group_by(p) %>%  mutate(mean = mean(power_nmin))
 
-ggplot(df_sim_p_bias, aes(x = power_nmin))+ 
+df_sim_p_theta <- df_sim_p_theta %>% group_by(p) %>%  mutate(mean = mean(power_nmin))
+
+ggplot(df_sim_p_theta, aes(x = power_nmin))+ 
   geom_histogram(fill = "grey", color = "black", position = "identity")+
   geom_vline(aes(xintercept = mean, group = p), color = "red")+
   geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
   facet_wrap(p ~.) +
   theme_bw()
 # separate by method
-ggplot(df_sim_p_bias, aes(x = power_nmin, fill = method, colour = method))+ 
+ggplot(df_sim_p_theta, aes(x = power_nmin, fill = method, colour = method))+ 
   facet_wrap(p ~.) +
   geom_histogram(alpha = 0.3, position = "identity")+
   geom_vline(aes(xintercept = mean, group = p), color = "red")+
@@ -171,6 +199,14 @@ p_E_norm <- normal_simplex(6,4)[[2]]
 sim_n <- simulation(p_C_norm, p_E_norm, n_pilot=10000, niter=10000)
 mean(sim_n$actual_power_nmin)
 hist(sim_n$actual_power_nmin)
+
+sim_n_power <-  as.data.frame(sim_n$actual_power) %>%
+  pivot_longer(everything(), names_to = "method", values_to = "power")
+ggplot(sim_n_power, aes(x = power, fill = method, colour = method)) + 
+  geom_histogram(alpha = 0.3, position = "identity") +
+  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+  facet_wrap(method ~.) 
+
 # Plot of minimal power per Method
 df_sim_n <- data.frame("power_nmin" = sim_n$actual_power_nmin, "method" = sim_n$method)
 
@@ -310,7 +346,7 @@ ggplot(df_sim_norm_loc2, aes(x = power_nmin, fill = method, colour = method))+
   theme_bw()
 
 # repeat for different seed
-sim_norm_loc3 <- vary_norm_loc(n_pilot = 10000, seed = 3, vec_length = 8)
+sim_norm_loc3 <- vary_norm_loc(n_pilot = 10000, seed = 4, vec_length = 6)
 
 mean_sim_norm_loc3 <- c()
 for (i in seq_along(1:length(sim_norm_loc3))) {
@@ -357,9 +393,6 @@ vary_prob_length <- function(n_pilot = 1000, niter = 10000, r = 1, seed = 1){
   }
   return(results)
 }
-set.seed(1)
-uniform_simplex(7)
-
 
 sim_cat <- vary_prob_length(niter=10000, n_pilot=10000, r = 1)
 mean_sim_cat <- c()
@@ -393,7 +426,7 @@ ggplot(df_sim_cat, aes(x = power_nmin, fill = method, colour = method))+
   theme_bw()
 
 ###
-sim_cat2 <- vary_prob_length(niter=10000, n_pilot=10000, r = 1, seed=2)
+sim_cat2 <- vary_prob_length(niter=10000, n_pilot=10000, r = 1, seed=4)
 mean_sim_cat2 <- c()
 for (i in seq_along(1:13)) {
   mean_sim_cat2[[i]] <- mean(sim_cat2[[i]]$actual_power_nmin)
@@ -424,6 +457,88 @@ ggplot(df_sim_cat2, aes(x = power_nmin, fill = method, colour = method))+
   geom_histogram(alpha = 0.3, position = "identity")+
   theme_bw()
 
+#### try it with fixed effect size for p_E
+vary_prob_length_PO <- function(n_pilot = 1000, niter = 10000, r = 1, seed = 1, theta=log(1.8)){
+  vec_length<- c(3:15)
+  results <- vector(mode = "list", length = length(vec_length))
+  for (i in seq_along(vec_length)) {
+    set.seed(seed)
+    p_C_u <- uniform_simplex(vec_length[i])[[1]]
+    p_E_u <- calc_p_E(p_C_u, theta_A = theta)
+    sim_u <- simulation(p_C_u, p_E_u, n_pilot=n_pilot, niter=niter, r=r)
+    results[[i]] <- sim_u
+  }
+  return(results)
+}
+
+sim_cat_PO <- vary_prob_length_ad_hoc()
+
+# show all histograms
+df_sim_cat_PO <- data.frame()
+for (i in seq_along(1:length(sim_cat_PO))) {
+  df <- data.frame("power_nmin" = sim_cat_PO[[i]]$actual_power_nmin, 
+                   "method" = sim_cat_PO[[i]]$method,
+                   "cat" = c(3:15)[i])
+  df_sim_cat_PO <- rbind(df_sim_cat_PO,df)
+}
+df_sim_cat_PO <- df_sim_cat_PO %>% group_by(cat) %>%  mutate(mean = mean(power_nmin))
+
+ggplot(df_sim_cat_PO, aes(x = power_nmin))+ 
+  geom_histogram(fill = "grey", color = "black", position = "identity")+
+  geom_vline(aes(xintercept = mean, group = cat), color = "red")+
+  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+  facet_wrap(cat ~.) +
+  theme_bw()
+# separate by method
+ggplot(df_sim_cat_PO, aes(x = power_nmin, fill = method, colour = method))+ 
+  facet_wrap(cat ~.) +
+  geom_vline(aes(xintercept = mean, group = cat), color = "red")+
+  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+  geom_histogram(alpha = 0.3, position = "identity")+
+  theme_bw()
+
+#### try it with ad-hoc method
+vary_prob_length_ad_hoc <- function(n_pilot = 1000, niter = 10000, r = 1, seed = 1){
+  vec_length<- c(3:15)
+  results <- vector(mode = "list", length = length(vec_length))
+  for (i in seq_along(vec_length)) {
+    set.seed(seed)
+    p_C_u <- uniform_simplex(vec_length[i])[[1]]
+    shift_vec <- p_C_u * 0 
+    shift_vec[1] <- -p_C_u[1]*0.2
+    shift_vec[length(p_C_u)] <- p_C_u[length(p_C_u)]*0.2
+    p_E_u <- p_C_u + shift_vec
+    sim_u <- simulation(p_C_u, p_E_u, n_pilot=n_pilot, niter=niter, r=r)
+    results[[i]] <- sim_u
+  }
+  return(results)
+}
+
+sim_cat_ad_hoc <- vary_prob_length_ad_hoc()
+
+# show all histograms
+df_sim_cat_ad_hoc<- data.frame()
+for (i in seq_along(1:length(sim_cat_ad_hoc))) {
+  df <- data.frame("power_nmin" = sim_cat_ad_hoc[[i]]$actual_power_nmin, 
+                   "method" = sim_cat_ad_hoc[[i]]$method,
+                   "cat" = c(3:15)[i])
+  df_sim_cat_ad_hoc <- rbind(df_sim_cat_ad_hoc,df)
+}
+df_sim_cat_ad_hoc <- df_sim_cat_ad_hoc %>% group_by(cat) %>%  mutate(mean = mean(power_nmin))
+
+ggplot(df_sim_cat_ad_hoc, aes(x = power_nmin))+ 
+  geom_histogram(fill = "grey", color = "black", position = "identity")+
+  geom_vline(aes(xintercept = mean, group = cat), color = "red")+
+  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+  facet_wrap(cat ~.) +
+  theme_bw()
+# separate by method
+ggplot(df_sim_cat_ad_hoc, aes(x = power_nmin, fill = method, colour = method))+ 
+  facet_wrap(cat ~.) +
+  geom_vline(aes(xintercept = mean, group = cat), color = "red")+
+  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+  geom_histogram(alpha = 0.3, position = "identity")+
+  theme_bw()
 
 
 ### different n_pilot #####
