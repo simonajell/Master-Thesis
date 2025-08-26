@@ -3,6 +3,7 @@ library(MASS)
 library(ggplot2)
 library(tidyr)
 library(dplyr)
+library(gridExtra)
 
 p_C2 <- c(0.3,0.2,0.15,0.2, 0.1, 0.05)  # control group outcome probabilities
 p_E2 <- c(0.15,0.3,0.1, 0.2, 0.2, 0.05)  # experimental group outcome probabilities
@@ -28,7 +29,16 @@ normal_simplex <- function(n, favored_cat) {
   return(list(y,y1))
 }
 
-
+normal_simplex_theta <- function(n, favored_cat, theta=log(1.8)) {
+  x <- seq(1, n, by = 1)
+  y <- dnorm(x, mean =  x[favored_cat], sd = 1.8)
+  y1 <- calc_p_E(y, theta_A = theta)
+  y1 <- y1/sum(y1)
+  y <- y/sum(y)
+  plot(x,y)
+  plot(x,y1)
+  return(list(y,y1))
+}
 # Function that generates two simplex vectors, where the second has higher values on average
 generate_two_simplex_vectors <- function(n, bias_strength = 2) {
   # Vector A: Gamma Distribution
@@ -45,8 +55,6 @@ generate_two_simplex_vectors <- function(n, bias_strength = 2) {
   list(a = a, b = b)
 }
 
-
-
 generate_two_simplex_vectors_random <- function(n) {
   # Vector A: Gamma Distribution
   alpha_a <- rep(1, n)
@@ -60,7 +68,6 @@ generate_two_simplex_vectors_random <- function(n) {
 
   list(a = a, b = b)
 }
-
 
 ##### Function that generates a simplex vector with a uniform distribution ####
 uniform_simplex <- function(n) {
@@ -252,7 +259,7 @@ samplesize_po_AA <- function(p_C, p_E, alpha, beta, r, p_C2=NULL, p_E2=NULL){
                     actual_r = actual_r, actual_power = actual_power, actual_power2=actual_power2))
 }
 
-samplesize_po_NN <- function(p_C, p_E, alpha, beta, r, p_C2=NULL, p_E2=NULL){
+samplesize_po_NN <- function(p_C, p_E, alpha=0.05, beta=0.2, r, p_C2=NULL, p_E2=NULL){
   
   theta_A <- calculate_theta_A_old(p_C, p_E, r)[1,1]
   Var_N <- calculate_theta_N(p_C, p_E, r)[1,2]^2
@@ -639,7 +646,6 @@ simulation<-function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05,beta=0.2){
        nmin=nmin,actual_power_nmin=actual_power_nmin,
        method = c("AfS", "ttest", "PO")[whichnmin])
 }
-
 
 ############# Simulation Application ###########################################
 # Small demo in an example setting.
