@@ -4,6 +4,7 @@ library(ggplot2)
 library(tidyr)
 library(dplyr)
 library(gridExtra)
+library(tidyverse)
 
 p_C2 <- c(0.3,0.2,0.15,0.2, 0.1, 0.05)  # control group outcome probabilities
 p_E2 <- c(0.15,0.3,0.1, 0.2, 0.2, 0.05)  # experimental group outcome probabilities
@@ -39,6 +40,32 @@ normal_simplex_theta <- function(n, favored_cat, theta=log(1.8)) {
   plot(x,y1)
   return(list(y,y1))
 }
+# Boulesteix idea fo how to generate the vectors
+
+normal_vector <- function(cat, niter=10000, theta_A = NA, seed = 1){
+  set.seed(seed)
+  # sample normally distributed values
+  samp_norm <- rnorm(n = niter, mean = 10, sd = 5)
+  samp_df <- data.frame(value = samp_norm) 
+  # calculate the breaking points to categorize the values
+  breaks_norm <- (max(samp_norm)-min(samp_norm))/(cat)
+  # cut the values up into categories
+  samp_df$category <- cut(samp_df$value, 
+                          breaks=c(seq(min(samp_norm), max(samp_norm), breaks_norm)), 
+                          labels=c(1:cat_norm)) 
+  p <- prop.table(table(samp_df$category))
+  if(is.na(theta_A)){
+    noise <- runif(n, min = 0.15, max = 0.3) # Add random noise
+    p_noisy <- p * noise  # Apply noise and normalize
+    p2 <- p_noisy/sum(p_noisy)
+    p2 <- p2/sum(p2)
+  } else{
+    p2 <- calc_p_E(p, theta_A = theta_A)
+    p2 <- p2/sum(p2)
+  }
+  return(list(p, p2))
+}
+
 # Function that generates two simplex vectors, where the second has higher values on average
 generate_two_simplex_vectors <- function(n, bias_strength = 2) {
   # Vector A: Gamma Distribution
@@ -81,7 +108,7 @@ uniform_simplex(6)
 ############# Proportional Odds Method #########################################
 # This function (adapted from Kieser 2020) will calculate the needed sample size based on p_C and p_E for proportional odds regression. A piece is still missing. Please ignore at this stage.
 # calculate theta_A with artcat (Ian Whites) method
-calculate_theta_A_old <- function(p_C, p_E, r = 1) {
+calculate_theta_A <- function(p_C, p_E, r = 1) {
   # Validate inputs
   if (length(p_C) != length(p_E)) {
     stop("p_C and p_E must have the same length (same number of outcome levels).")
@@ -118,7 +145,7 @@ calculate_theta_A_old <- function(p_C, p_E, r = 1) {
   return(alt)
 }
 
-calculate_theta_A <- function(p_C, p_E, r = 1) {
+calculate_theta_A1 <- function(p_C, p_E, r = 1) {
   # Validate inputs
   if (length(p_C) != length(p_E)) {
     stop("p_C and p_E must have the same length (same number of outcome levels).")
@@ -240,8 +267,8 @@ calculate_theta_N <- function(p_C, p_E, r = 1) {
 
 samplesize_po_AA <- function(p_C, p_E, alpha, beta, r, p_C2=NULL, p_E2=NULL){
   
-  theta_A <- calculate_theta_A_old(p_C, p_E, r)[1,1]
-  Var_A <- calculate_theta_A_old(p_C, p_E, r)[1,2]^2
+  theta_A <- calculate_theta_A(p_C, p_E, r)[1,1]
+  Var_A <- calculate_theta_A(p_C, p_E, r)[1,2]^2
   
   n <- (Var_A*((qnorm(1-alpha/2)+qnorm(1-beta))^2))/(theta_A^2) # White, 2023 Formel 5 (AA)
   n_E <- ceiling(r/(1+r) * n)
@@ -261,7 +288,7 @@ samplesize_po_AA <- function(p_C, p_E, alpha, beta, r, p_C2=NULL, p_E2=NULL){
 
 samplesize_po_NN <- function(p_C, p_E, alpha=0.05, beta=0.2, r, p_C2=NULL, p_E2=NULL){
   
-  theta_A <- calculate_theta_A_old(p_C, p_E, r)[1,1]
+  theta_A <- calculate_theta_A(p_C, p_E, r)[1,1]
   Var_N <- calculate_theta_N(p_C, p_E, r)[1,2]^2
   
   n <- (Var_N*((qnorm(1-alpha/2)+qnorm(1-beta))^2))/(theta_A^2) # White, 2023 Formel 5 (AA)
@@ -272,7 +299,7 @@ samplesize_po_NN <- function(p_C, p_E, alpha=0.05, beta=0.2, r, p_C2=NULL, p_E2=
   actual_power <- pnorm(sqrt((n_total*(theta_A^2))/Var_N)-qnorm(1-alpha/2))
   actual_power2<-NA
   if (!is.null(p_C2)&!is.null(p_E2)){
-    theta_A2 <- calculate_theta_A_old(p_C2, p_E2, r)[1,1]
+    theta_A2 <- calculate_theta_A(p_C2, p_E2, r)[1,1]
     Var_N2 <- calculate_theta_N(p_C2, p_E2, r)[1,2]^2
     actual_power2 <- pnorm(sqrt((n_total*(theta_A2^2))/Var_N2)-qnorm(1-alpha/2))
   }
@@ -282,8 +309,8 @@ samplesize_po_NN <- function(p_C, p_E, alpha=0.05, beta=0.2, r, p_C2=NULL, p_E2=
 
 samplesize_po_NA <- function(p_C, p_E, alpha, beta, r, p_C2=NULL, p_E2=NULL){
   
-  d <- calculate_theta_A_old(p_C, p_E, r)[1,1]
-  V_A <- calculate_theta_A_old(p_C, p_E, r)[1,2]^2
+  d <- calculate_theta_A(p_C, p_E, r)[1,1]
+  V_A <- calculate_theta_A(p_C, p_E, r)[1,2]^2
   V_N <- calculate_theta_N(p_C, p_E, r)[1,2]^2
 
   n <- ((sqrt(V_N)*qnorm(1-alpha/2)+sqrt(V_A)*qnorm(1-beta))^2)/(d^2) # White, 2023 Formel 4 (NA)
@@ -294,8 +321,8 @@ samplesize_po_NA <- function(p_C, p_E, alpha, beta, r, p_C2=NULL, p_E2=NULL){
   actual_power <- pnorm(((sqrt(n_total*d^2))-(sqrt(V_N)*qnorm(1-alpha/2)))/(sqrt(V_A)))
   actual_power2<-NA
   if (!is.null(p_C2)&!is.null(p_E2)){
-    d2 <- calculate_theta_A_old(p_C2, p_E2, r)[1,1]
-    V_A2 <- calculate_theta_A_old(p_C2, p_E2, r)[1,2]^2
+    d2 <- calculate_theta_A(p_C2, p_E2, r)[1,1]
+    V_A2 <- calculate_theta_A(p_C2, p_E2, r)[1,2]^2
     V_N2 <- calculate_theta_N(p_C2, p_E2, r)[1,2]^2
     actual_power2 <- pnorm(((sqrt(n_total*d2^2))-(sqrt(V_N2)*qnorm(1-alpha/2)))/(sqrt(V_A2)))
   }
@@ -305,7 +332,7 @@ samplesize_po_NA <- function(p_C, p_E, alpha, beta, r, p_C2=NULL, p_E2=NULL){
 
 samplesize_po_kieser <- function(p_C, p_E, alpha, beta, r, p_C2=NULL, p_E2=NULL){
   
-  theta_A <- calculate_theta_A_old(p_C, p_E, r)[1,1]
+  theta_A <- calculate_theta_A(p_C, p_E, r)[1,1]
   x = 0
   for (i in 1:length(p_C)){
     x = x + ((p_C[i] + r*p_E[i]) / (1 + r))^3
@@ -622,20 +649,20 @@ generate.pEpC.estimate<-function(p_C, p_E, r, n_pilot){
 
 simulation<-function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05,beta=0.2){
   n_needed<-matrix(NA,niter,3)
-  colnames(n_needed)<-c("AfS","ttestord", "po")
+  colnames(n_needed)<-c("WMW","ttestord", "po")
   actual_power2<-matrix(NA,niter,3)
-  colnames(actual_power2)<-c("AfS","ttestord", "po")
+  colnames(actual_power2)<-c("WMW","ttestord", "po")
   for (i in 1:niter){
     set.seed(i)
     print(i)
     phat<-generate.pEpC.estimate(p_C=p_C, p_E=p_E, r=r, n_pilot=n_pilot)
-    result_AfS<-samplesize_AfS(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
+    result_WMW<-samplesize_AfS(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
     result_ttestord<-samplesize_ttestord(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
     result_po <- samplesize_po_NN(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E) # newly added
-    n_needed[i,1]<- result_AfS$n_total
+    n_needed[i,1]<- result_WMW$n_total
     n_needed[i,2]<- result_ttestord$n_total
     n_needed[i,3]<- result_po$n_total
-    actual_power2[i,1]<-result_AfS$actual_power2
+    actual_power2[i,1]<-result_WMW$actual_power2
     actual_power2[i,2]<-result_ttestord$actual_power2
     actual_power2[i,3]<-result_po$actual_power2
   }
@@ -644,7 +671,7 @@ simulation<-function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05,beta=0.2){
   actual_power_nmin<-actual_power2[cbind(1:niter,whichnmin)]
   list(n_needed=n_needed,actual_power = actual_power2, 
        nmin=nmin,actual_power_nmin=actual_power_nmin,
-       method = c("AfS", "ttest", "PO")[whichnmin])
+       method = c("WMW", "ttest", "PO")[whichnmin])
 }
 
 ############# Simulation Application ###########################################
@@ -682,6 +709,66 @@ df50 <- data.frame("power_nmin" = test50$actual_power_nmin, "method" = test50$me
 ggplot(df50, aes(x = power_nmin, fill = method, colour = method)) + 
   geom_histogram(alpha = 0.3, position = "identity")
 
+### n_pilot = 100
+test100<-simulation(p_C,p_E,n_pilot=100,niter=10000)
+mean(test100$actual_power_nmin)
+
+# range of all estimated n
+min(test100$n_needed)
+max(test100$n_needed)
+
+# range of all estimated power
+min(test100$actual_power_nmin)
+max(test100$actual_power_nmin)
+
+# plot the histograms
+df_test100 <- data.frame()
+df_test100 <- data.frame("power_nmin" = test100$actual_power_nmin, 
+                          "method" = test100$method) %>%
+  mutate(mean = mean(power_nmin))
+df_test100$method <- as.factor(df_test100$method)
+df_test100$method <- relevel(df_test100$method, "ttest")
+
+grid.arrange(ggplot(df_test100, aes(x = power_nmin))+ 
+               geom_histogram(fill = "grey", color = "black", position = "identity")+
+               geom_vline(aes(xintercept = mean), color = "red")+
+               geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+               theme_bw(),
+             ggplot(df_test100, aes(x = power_nmin, fill = method, colour = method))+ 
+               geom_histogram(alpha = 0.3, position = "identity")+
+               geom_vline(aes(xintercept = mean), color = "red")+
+               scale_colour_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
+               scale_fill_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
+               geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+               theme_bw())
+# show the powers separated
+sim_100_power <-  as.data.frame(test100$actual_power) %>%
+  pivot_longer(everything(), names_to = "method", values_to = "power")
+ggplot(sim_100_power, aes(x = power, fill = method, colour = method)) + 
+  geom_histogram(alpha = 0.3, position = "identity") +
+  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+  facet_wrap(method ~.) 
+ggplot(sim_100_power, aes(x = power, fill = method, colour = method)) + 
+  geom_histogram(alpha = 0.3, position = "identity") +
+  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")
+
+# distribution of the powers
+ggplot(test100$actual_power)+
+  geom_histogram(mapping = aes(x=WMW), alpha = 0.3, fill="#C77CFF", color="#C77CFF")+
+  geom_histogram(mapping = aes(x=po), alpha = 0.3, fill="#00BFC4", color="#00BFC4")+
+  geom_histogram(mapping = aes(x=ttestord), alpha = 0.3, fill="#7CAE00", color="#7CAE00")+
+  labs(x="power")
+
+
+# distribution of the sample sizes
+ggplot(test100$n_needed)+
+  geom_histogram(mapping = aes(x=WMW), alpha = 0.3, fill="#C77CFF", color="#C77CFF")+
+  geom_histogram(mapping = aes(x=po), alpha = 0.3, fill="#00BFC4", color="#00BFC4")+
+  geom_histogram(mapping = aes(x=ttestord), alpha = 0.3, fill="#7CAE00", color="#7CAE00")+
+  xlim(0,5000)
+
+
+### n_pilot = 500
 test500<-simulation(p_C,p_E,n_pilot=500,niter=10000)
 mean(test500$n_needed[,1]<test500$n_needed[,2])     # how often n calculated by AfS is smaller than n calculated by ttestord
 mean(test500$n_needed[,2]<test500$n_needed[,3])     # how often n calculated by ttest is smaller than n calculated by PO
@@ -700,29 +787,78 @@ ggplot(df500, aes(x = power_nmin, fill = method, colour = method)) +
 length(which(test500$method == "PO"))/10000
 length(which(test500$method == "ttest"))/10000
 
+#### n_pilot = 1000
 test1000<-simulation(p_C, p_E, n_pilot=1000, niter=10000)
 mean(test1000$n_needed[,1]<test1000$n_needed[,2])
 mean(test1000$actual_power_nmin)
+sd(test1000$actual_power_nmin)
 hist(test1000$actual_power_nmin)
-plot(test1000$actual_power_nmin, type = 'p', col = factor(test1000$method))
-  legend("topleft", legend = levels(factor(test1000$method)), 
-         pch = 19, col = factor(levels(factor(test1000$method))))
-df1000 <- data.frame("power_nmin" = test1000$actual_power_nmin, "method" = test1000$method)
-ggplot(df1000, aes(x = power_nmin, fill = method, colour = method)) + 
-    geom_histogram(alpha = 0.3, position = "identity")
+
+# range of all estimated n
+min(test1000$n_needed)
+max(test1000$n_needed)
+
+df_test1000 <- data.frame()
+df_test1000 <- data.frame("power_nmin" = test1000$actual_power_nmin, 
+                   "method" = test1000$method) %>%
+  mutate(mean = mean(power_nmin))
+df_test1000$method <- as.factor(df_test1000$method)
+df_test1000$method <- relevel(df_test1000$method, "ttest")
+
+grid.arrange(ggplot(df_test1000, aes(x = power_nmin))+ 
+  geom_histogram(fill = "grey", color = "black", position = "identity")+
+  geom_vline(aes(xintercept = mean), color = "red")+
+  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+  theme_bw(),
+ggplot(df_test1000, aes(x = power_nmin, fill = method, colour = method))+ 
+  geom_histogram(alpha = 0.3, position = "identity")+
+  geom_vline(aes(xintercept = mean), color = "red")+
+  scale_colour_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
+  scale_fill_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
+  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+  theme_bw())
+
+# show the powers separated
+sim_1000_power <-  as.data.frame(test1000$actual_power) %>%
+  pivot_longer(everything(), names_to = "method", values_to = "power")
+ggplot(sim_1000_power, aes(x = power, fill = method, colour = method)) + 
+  geom_histogram(alpha = 0.3, position = "identity") +
+  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+  facet_wrap(method ~.) 
+ggplot(sim_1000_power, aes(x = power, fill = method, colour = method)) + 
+  geom_histogram(alpha = 0.3, position = "identity") +
+  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")
+
+# show the distributions of the sample sizes
+ggplot(test1000$n_needed)+
+  geom_histogram(mapping = aes(x=AfS), alpha = 0.3, fill="#C77CFF", color="#C77CFF")+
+  geom_histogram(mapping = aes(x=po), alpha = 0.3, fill="#00BFC4", color="#00BFC4")+
+  geom_histogram(mapping = aes(x=ttestord), alpha = 0.3, fill="#7CAE00", color="#7CAE00")
+
+sim_1000_n <-  as.data.frame(test1000$n_needed) %>%
+  rowid_to_column(., "ID") %>%
+  pivot_longer(cols = -ID, names_to = "method", values_to = "n")
+sim_1000_n <- rowid_to_column(sim_1000_n, "ID")
+
+ggplot(sim_1000_n, aes(x = n, fill = method, colour = method)) + 
+  geom_histogram(alpha = 0.3, position = "identity") +
+  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+  facet_wrap(method ~.) 
+
+ggplot(sim_1000_n, aes(x = n, y = ID, colour = method)) + 
+  geom_point(alpha = 0.3, position = "identity") 
+
+# percentages of methods
 length(which(test1000$method == "PO"))/10000
 length(which(test1000$method == "ttest"))/10000
 
-#plot the actual_powers of the methods
-hist(test1000$actual_power[,1])
-hist(test1000$actual_power[,2])
-hist(test1000$actual_power[,3])
-### now layer them?
 
-### maybe do this with the three po methods???
+
+#### n_pilot = 10000
 
 test10000_1<-simulation(p_C,p_E,n_pilot=10000,niter=1000)
 mean(test10000_1$actual_power_nmin)
+
 hist(test10000_1$actual_power_nmin)
 plot(test10000_1$actual_power_nmin, type = 'p', col = factor(test10000_1$method))
 legend("topleft", legend = levels(factor(test10000_1$method)), 
@@ -742,6 +878,15 @@ ggplot(df10000, aes(x = power_nmin, fill = method, colour = method)) +
   geom_histogram(alpha = 0.3, position = "identity")
 length(which(test10000$method == "PO"))/10000
 length(which(test10000$method == "ttest"))/10000
+
+ggplot(test10000$n_needed)+
+  geom_histogram(mapping = aes(x=WMW), alpha = 0.3, fill="#C77CFF", color="#C77CFF")+
+  geom_histogram(mapping = aes(x=po), alpha = 0.3, fill="#00BFC4", color="#00BFC4")+
+  geom_histogram(mapping = aes(x=ttestord), alpha = 0.3, fill="#7CAE00", color="#7CAE00")
+ggplot(test10000$actual_power)+
+  geom_histogram(mapping = aes(x=WMW), alpha = 0.3, fill="#C77CFF", color="#C77CFF")+
+  geom_histogram(mapping = aes(x=po), alpha = 0.3, fill="#00BFC4", color="#00BFC4")+
+  geom_histogram(mapping = aes(x=ttestord), alpha = 0.3, fill="#7CAE00", color="#7CAE00")
 
 test15000<-simulation(p_C,p_E,n_pilot=15000,niter=10000)
 mean(test15000$actual_power_nmin)
@@ -816,7 +961,10 @@ sim_small_test <- settings(n_vector = c(seq(150,1000,50), seq(1500, 12000, 500))
                            p_C, p_E, r, niter=10000)
 ggplot(sim_small_test[[1]], aes(x=n_pilot, y=nmin_power)) +
   geom_point()+
-  geom_hline(yintercept=0.8, color = "red")
+  geom_hline(yintercept=0.8, color = "red", linetype = "dotted")+
+  theme_bw()
+
+
 ggplot(sim_small_test[[2]], aes(x=n_pilot, y=min_n, color = method)) +
   geom_point()
 length(which(sim_small_test[[2]]$method =="PO"))/nrow(sim_small_test[[2]])
@@ -1015,3 +1163,9 @@ ggplot(df10000_norm, aes(x = power_nmin, fill = method, colour = method)) +
 length(which(test10000_norm$method == "PO"))/10000
 length(which(test10000_norm$method == "ttest"))/10000
 length(which(test10000_norm$method == "AfS"))/10000
+
+
+##### Sensitivitätsanalyse, schließe pilotstudien mit großen und kleinen effekten aus
+
+
+

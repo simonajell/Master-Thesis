@@ -20,7 +20,7 @@ sim$actual_power[which(as.matrix(sim$n_needed) == max(sim$n_needed), arr.ind = T
 
 
 # function to show all histograms
-sim_plots <- function(data, group){
+sim_plots <- function(data, group, plots=0){
   df_data <- data.frame()
   for (i in seq_along(1:length(data))) {
     df <- data.frame("power_nmin" = data[[i]]$actual_power_nmin, 
@@ -30,6 +30,8 @@ sim_plots <- function(data, group){
   }
   
   df_data <- df_data %>% group_by(group) %>%  mutate(mean = mean(power_nmin))
+  df_data$method <- as.factor(df_data$method)
+  df_data$method <- relevel(df_data$method, "ttest")
   
   plot1 <- ggplot(df_data, aes(x = power_nmin))+ 
     geom_histogram(fill = "grey", color = "black", position = "identity")+
@@ -39,12 +41,21 @@ sim_plots <- function(data, group){
     theme_bw()
   plot2 <- ggplot(df_data, aes(x = power_nmin, fill = method, colour = method))+ 
     facet_wrap(group ~.) +
-    geom_histogram(alpha = 0.3, position = "identity")+
+    geom_histogram(alpha = 0.2, position = "identity")+
+    scale_colour_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
+    scale_fill_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
     geom_vline(aes(xintercept = mean, group = group), color = "red")+
     geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
     theme_bw()
+  if(plots==0){
   grid.arrange(plot1, plot2)
+  } else if(plots==1){
+    return(plot1)
+  } else if(plots == 2){
+    return(plot2)
+  }
 }
+
 ### different r #####
 vary_r <- function(p_C, p_E, n_pilot = 10000, niter = 10000){
   r_vec <- c(0.2, 0.4, 0.6, 0.8, 1)
@@ -77,46 +88,47 @@ sim_plots(sim_r_1000, c(0.2, 0.4, 0.6, 0.8, 1))
 ### vary p_C and p_E #####
 ## vary effect size theta
 vary_p_theta <- function(n_pilot = 1000, niter = 10000, r = 1, cat = 6){
-  theta_vec <- log(seq(1.1, 2.5, 0.2))
+  theta_vec <- log(seq(0.1, 2.5, 0.4))
   p_results <- data.frame()
   results <- vector(mode = "list", length = length(theta_vec))
   for (i in seq_along(theta_vec)) {
     set.seed(1)
-    p_C1 <- uniform_simplex(cat)[[1]]
+    p_C1 <- uniform_simplex(cat)[[1]] ## try random_simplex here
     p_E1 <- calc_p_E(p_C1, theta_A = theta_vec[i])
     sim <- simulation(p_C1, p_E1, n_pilot=n_pilot, niter=niter, r=r)
     results[[i]] <- sim
   }
   return(results)
 }
+
 sim_p_theta_50 <- vary_p_theta(n_pilot = 50)
-sim_p_theta_100 <- vary_p_theta(n_pilot = 100)
-sim_p_theta_500 <- vary_p_theta(n_pilot = 500)
+sim_p_theta_100 <- vary_p_theta(n_pilot = 100) 
+sim_p_theta_500 <- vary_p_theta(n_pilot = 500) 
 sim_p_theta_1000 <- vary_p_theta(n_pilot = 1000)
+sim_p_theta_5000 <- vary_p_theta(n_pilot = 5000)
 
-sim_plots(sim_p_theta_50, paste0("log(",seq(1.1, 2.5, 0.2), ")"))
-sim_plots(sim_p_theta_100, paste0("log(",seq(1.1, 2.5, 0.2), ")"))
-sim_plots(sim_p_theta_500, paste0("log(",seq(1.1, 2.5, 0.2), ")"))
-sim_plots(sim_p_theta_1000, paste0("log(",seq(1.1, 2.5, 0.2), ")"))
-
+sim_plots(sim_p_theta_50, paste0("log(",seq(0.1, 2.5, 0.4), ")"))
+sim_plots(sim_p_theta_100, paste0("log(",seq(0.1, 2.5, 0.4), ")"))
+sim_plots(sim_p_theta_500, paste0("log(",seq(0.1, 2.5, 0.4), ")"))
+sim_plots(sim_p_theta_1000, paste0("log(",seq(0.1, 2.5, 0.4), ")"))
+sim_plots(sim_p_theta_5000, paste0("log(",seq(0.1, 2.5, 0.4), ")"))
 
 
 # just repeat different p with the same bias and different seeds
-vary_p <- function(n_pilot = 1000, niter = 10000, r = 1, cat = 6, rep=10, bias = 2){
+vary_p <- function(n_pilot = 1000, niter = 10000, r = 1, cat = 6, rep=10, theta = log(1.8)){
   vec <- c(1:rep)
   p_results <- data.frame()
   results <- vector(mode = "list", length = rep)
   for (i in seq_along(vec)) {
     set.seed(i)
-    p <- generate_two_simplex_vectors_random(cat)
-    p_C1 <- p[[1]]
-    p_E1 <- p[[2]]
+    p_C1 <- random_simplex(cat)
+    p_E1 <- calc_p_E(p_C1, theta_A = theta)
     sim <- simulation(p_C1, p_E1, n_pilot=n_pilot, niter=niter, r=r)
     results[[i]] <- sim
   }
   return(results)
 }
-sim_p <- vary_p(n_pilot = 10000)
+sim_p <- vary_p(n_pilot = 10000, rep=5)
 
 mean_sim_p <- c()
 for (i in seq_along(1:length(sim_p))) {
@@ -142,6 +154,10 @@ ggplot(sim_n_power, aes(x = power, fill = method, colour = method)) +
   geom_histogram(alpha = 0.3, position = "identity") +
   geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
   facet_wrap(method ~.) 
+
+ggplot(sim_n_power, aes(x = power, fill = method, colour = method)) + 
+  geom_histogram(alpha = 0.3, position = "identity") +
+  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")
 
 # Plot of minimal power per Method
 df_sim_n <- data.frame("power_nmin" = sim_n$actual_power_nmin, "method" = sim_n$method)
@@ -214,6 +230,32 @@ sim_plots(sim_norm_loc, c(1:length(sim_norm_loc)))
 sim_norm_loc2 <- vary_norm_loc(n_pilot = 1000, theta = log(1.2), seed = 1)
 sim_plots(sim_norm_loc2, c(1:length(sim_norm_loc2)))
 
+
+#### Try Boulesteix idea of sampling the p vector with a continuous variable
+
+vary_norm_2 <- function(n_pilot = 1000, niter = 10000, r = 1, rep = 10, vec_length = 6, theta = NA){
+  rep_vec <- c(1:rep)
+  results <- vector(mode = "list", length = rep)
+  for (i in seq_along(1:rep)) {
+    set.seed(i)
+    p_C_norm <- normal_vector(cat = ,vec_length, niter = niter, seed = i, theta_A = theta)[[1]]
+    p_E_norm <- normal_vector(cat = vec_length, niter = niter, seed = i, theta_A = theta)[[2]]
+    sim <- simulation(p_C_norm, p_E_norm, r = r, niter = niter, n_pilot = n_pilot)
+    results[[i]] <- sim
+  }
+  return(results)
+}
+# random noise
+sim_norm_new <- vary_norm_2(n_pilot = 10000, rep=5)
+sim_plots(sim_norm_new, c(1:length(sim_norm_new)))
+
+# set effect size
+sim_norm_new2 <- vary_norm_2(n_pilot = 1000, rep=5, theta = log(1.8))
+sim_plots(sim_norm_new2, c(1:length(sim_norm_new2)))
+
+sim_norm_new3 <- vary_norm_2(n_pilot = 10000, rep=1, theta = log(1.1))
+sim_plots(sim_norm_new3, c(1:length(sim_norm_new3)))
+
 ### different number of categories #####
 vary_prob_length <- function(n_pilot = 1000, niter = 10000, r = 1, seed = 1){
   vec_length<- c(3:15)
@@ -261,8 +303,11 @@ vary_prob_length_PO <- function(n_pilot = 1000, niter = 10000, r = 1, seed = 1, 
   return(results)
 }
 
-sim_cat_PO <- vary_prob_length_ad_hoc(n_pilot = 1000)
+sim_cat_PO <- vary_prob_length_PO(n_pilot = 1000)
 sim_plots(sim_cat_PO, c(3:15))
+
+sim_cat_PO2 <- vary_prob_length_PO(n_pilot = 1000, theta = log(1.3))
+sim_plots(sim_cat_PO2, c(3:15))
 
 #### try it with ad-hoc method
 vary_prob_length_ad_hoc <- function(n_pilot = 1000, niter = 10000, r = 1, seed = 1){
@@ -297,7 +342,7 @@ vary_npilot <- function(p_C, p_E, niter = 10000, r = 1){
 
 sim_npilot <- vary_npilot(p_C, p_E)
 
-sim_plots(sim_npilot, c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000, 20000))
+sim_plots(sim_npilot, c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000, 20000), plots=2)
   
   
 mean_sim_npilot <- c()

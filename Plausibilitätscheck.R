@@ -154,7 +154,7 @@ theta_comparison <- function(comp_iter, vec_length, r){
     p_e <- calc_p_E(p_C = p_c, theta_A = log(theta_random))
     theta_results[i,1] <- log(theta_random)
     # White method
-    theta_results[i,2] <- calculate_theta_A_old(p_c, p_e, r)[1,1]
+    theta_results[i,2] <- calculate_theta_A(p_c, p_e, r)[1,1]
   }
   theta_results$diff <- abs(theta_results$theta_A - theta_results$est_theta)
   return(theta_results)
@@ -248,7 +248,7 @@ for (i in 1:length(p_c_po)){
 var_k <- 12/(1-x)
 
 
-# make function, that generates multiple different probabilitie vectors that fulfuill PO assumption and caculate both variances
+# make function, that generates multiple different probability vectors that fulfill PO assumption and calculate both variances
 var_comparison <- function(comp_iter, vec_length, r){
   var_results <- data.frame("theta_A" = c(NA), "var_w"=c(NA), "var_k" = c(NA), "diff" = c(NA))
   for (i in seq_along(1:comp_iter)) {
@@ -366,7 +366,7 @@ ggplot(var_comp_noPO_PO, aes(x=theta, y=diff, color=PO))+
 p_C_PO <- random_simplex(5)
 p_E_PO <- calc_p_E(p_C_PO, theta_A = log(1.8))
 
-exp(calculate_theta_A_old(p_C_PO, p_E_PO))
+exp(calculate_theta_A(p_C_PO, p_E_PO))
 samplesize_po_NN(p_C_PO, p_E_PO, alpha = 0.05, beta = 0.2, r =1)
 samplesize_po_kieser(p_C_PO, p_E_PO, alpha = 0.05, beta = 0.2, r =1)
 samplesize_po_kieser_known(p_C_PO, p_E_PO, theta = 1.8, alpha = 0.05, beta = 0.2, r =1)
@@ -385,7 +385,7 @@ comp_PO_fullfilled <- function(alpha=0.05, beta=0.2, r=1, iter=1000, theta_A = 1
     print(i)
     p_C <- random_simplex(prob_length)
     p_E <- calc_p_E(p_C, theta_A = log(theta_A))
-    theta_vec[i] <- calculate_theta_A_old(p_C, p_E)
+    theta_vec[i] <- calculate_theta_A(p_C, p_E)
     results_NN <- rbind(results_NN, as.data.frame(samplesize_po_NN(p_C=p_C, p_E=p_E, alpha, beta, r)))
     results_AA <- rbind(results_AA, as.data.frame(samplesize_po_AA(p_C=p_C, p_E=p_E, alpha, beta, r)))
     results_NA <- rbind(results_NA, as.data.frame(samplesize_po_NA(p_C=p_C, p_E=p_E, alpha, beta, r)))
@@ -434,7 +434,7 @@ comp_PO_fullfilled <- function(alpha=0.05, beta=0.2, r=1, iter=1000, theta_A = 1
     print(i)
     p_C <- random_simplex(prob_length)
     p_E <- calc_p_E(p_C, theta_A = log(theta_A))
-    theta_vec[i] <- calculate_theta_A_old(p_C, p_E)
+    theta_vec[i] <- calculate_theta_A(p_C, p_E)
     results_NN <- rbind(results_NN, as.data.frame(samplesize_po_NN(p_C=p_C, p_E=p_E, alpha, beta, r)))
     results_AA <- rbind(results_AA, as.data.frame(samplesize_po_AA(p_C=p_C, p_E=p_E, alpha, beta, r)))
     results_NA <- rbind(results_NA, as.data.frame(samplesize_po_NA(p_C=p_C, p_E=p_E, alpha, beta, r)))

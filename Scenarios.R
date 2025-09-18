@@ -2,14 +2,51 @@
   # When one category wasn´t observed (meaning the prob. of this category is 0)
   # When the sample size is very big, because the effect is so small
 
-### do some inspecting first
-# mean sample size of sample sizes with power close to 1
-mean(npilot_100$n_needed[which(npilot_100$actual_power_nmin > 0.99999),1])
+
+#### Missing Category #####
+# function that combines a category thats zero with the following one (or previous if its the last one)
+  # and it does it for both vectors equally
+combine_zero_category <- function(vec1, vec2) {
+  # Check that both vectors have the same length
+  if (length(vec1) != length(vec2)) {
+    stop("Both vectors must have the same length")
+  }
+  
+  # Find index of zero in either vector (assumes only one vector has zero)
+  zero_index <- which(vec1 == 0 | vec2 == 0)
+  
+  # If no zero found, return original vectors
+  if (length(zero_index) == 0) {
+    return(list(vec1 = vec1, vec2 = vec2))
+  }
+  
+  # There should be only one zero
+  zero_index <- zero_index[1]
+  
+  # Determine neighbor index to merge with
+  if (zero_index == length(vec1)) {
+    # If zero is last element, merge with previous
+    neighbor_index <- zero_index - 1
+  } else {
+    # Otherwise, merge with next element
+    neighbor_index <- zero_index + 1
+  }
+  
+  # Combine the zero category with its neighbor in both vectors
+  vec1[neighbor_index] <- vec1[neighbor_index] + vec1[zero_index]
+  vec2[neighbor_index] <- vec2[neighbor_index] + vec2[zero_index]
+  
+  # Remove the zero category
+  vec1 <- vec1[-zero_index]
+  vec2 <- vec2[-zero_index]
+  
+  return(list(C = vec1, E = vec2))
+}
 
 
-#### Missing Category
 # simulation that handles when n_pilot is very small
 # either discard the one category or combine it with another neighbor category
+# this function combines the missing category with the following one (or the previous if its the last)
 simulation_missing_cat<-function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05,beta=0.2){
   n_needed<-matrix(NA,niter,3)
   colnames(n_needed)<-c("AfS","ttestord", "po")
@@ -18,24 +55,8 @@ simulation_missing_cat<-function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05,
   for (i in 1:niter){
     set.seed(i)
     print(i)
-    phat<-generate.pEpC.estimate(p_C=p_C, p_E=p_E, r=r, n_pilot=n_pilot)
-    phat_df <- data.frame(phat$C, phat$E)
-    if(any(c(phat$C, phat$E)==0)){
-      null_cat <- which(phat_df==0, arr.ind = TRUE)[,1]
-      if(any(null_cat>1)){
-        combine_cat <- null_cat-1
-        phat_df[combine_cat,] <- phat_df[null_cat,] + phat_df[combine_cat,]
-        phat_df<-phat_df[-null_cat,]
-        phat <- list(C=phat_df$phat.C, E=phat_df$phat.E)
-        n_pilot <- n_pilot-1
-      }else{
-        combine_cat <- null_cat+1
-        phat_df[combine_cat,] <- phat_df[null_cat,] + phat_df[combine_cat,]
-        phat_df<-phat_df[-null_cat,]
-        phat <- list(C=phat_df$phat.C, E=phat_df$phat.E)
-        n_pilot <- n_pilot-1
-      }
-    } else {}
+    p <- combine_zero_category(p_C, p_E)
+    phat<-generate.pEpC.estimate(p_C=p$C, p_E=p$E, r=r, n_pilot=n_pilot)
     result_AfS<-samplesize_AfS(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
     result_ttestord<-samplesize_ttestord(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
     result_po <- samplesize_po_NN(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E) # newly added
@@ -53,10 +74,33 @@ simulation_missing_cat<-function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05,
        nmin=nmin,actual_power_nmin=actual_power_nmin,
        method = c("AfS", "ttest", "PO")[whichnmin])
 }
-test_miss <- simulation_missing_cat(p_C, p_E, r=1, niter = 10000, n_pilot = 30)
+p_C_0 <- c(0.2, 0.15, 0, 0.4, 0.25)
+p_E_0 <- c(0.33, 0.18, 0.05, 0.30, 0.14)
+
+test_miss <- simulation_missing_cat(p_C_0, p_E_0, r=1, niter = 10000, n_pilot = 1000)
+hist(test_miss$actual_power_nmin)
+
+test_miss_normal <- simulation(p_C_0, p_E_0, r=1, niter = 10000, n_pilot = 1000)
+hist(test_miss_normal$actual_power_nmin)
+
+## other values with a less strong effect
+p_C_02 <- c(0.2, 0.15, 0, 0.4, 0.25)
+p_E_02 <- c(0.11, 0.09, 0.02, 0.38, 0.40)
+sum(p_E_02)
+calc_p_E(p_C_02, log(0.48))
+exp(calculate_theta_A(p_C_02, p_E_02)[,1])
+
+test_miss2 <- simulation_missing_cat(p_C_02, p_E_02, r=1, niter = 10000, n_pilot = 1000)
+hist(test_miss2$actual_power_nmin)
+
+test_miss_normal2 <- simulation(p_C_02, p_E_02, r=1, niter = 10000, n_pilot = 1000)
+hist(test_miss_normal2$actual_power_nmin)
+
+# automate this
 
 
-#### Enormous sample size
+
+#### Very large sample size #####
 # simulation that handles when the effect is very small, and the sample size thus very big
 # This should also get rid of the many Power=1
 
@@ -72,7 +116,7 @@ simulation_small_effect<-function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05
     set.seed(i)
     print(i)
     phat<-generate.pEpC.estimate(p_C=p_C, p_E=p_E, r=r, n_pilot=n_pilot)
-    est_effect <- calculate_theta_A_old(p_C=phat$C, p_E=phat$E, r=r)[,1]
+    est_effect <- calculate_theta_A(p_C=phat$C, p_E=phat$E, r=r)[,1]
     est_eff[i,1] <- est_effect
     est_eff[i,2] <- i
     #    if(abs(est_effect)<0.1){    print ("too small effect") ; next }
@@ -172,8 +216,8 @@ vary_npilot_exclusion <- function(p_C, p_E, niter = 10000, r = 1, max_samp = 100
   }
   return(results)
 }
-sim_ss_exclusion <- vary_npilot_exclusion(p_C, p_E, max_samp=800)
-sim_plots(sim_ss_exclusion, c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000, 20000))
+sim_ss_exclusion <- vary_npilot_exclusion(p_C, p_E, max_samp=1000)
+sim_plots(sim_ss_exclusion, c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000, 20000), plots = 1)
 sim_plots(sim_npilot, c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000, 20000))
 # way less power = 1 if sample sizes bigger than 1500 are excluded
 
