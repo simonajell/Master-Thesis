@@ -20,7 +20,7 @@ sim$actual_power[which(as.matrix(sim$n_needed) == max(sim$n_needed), arr.ind = T
 
 
 # function to show all histograms
-sim_plots <- function(data, group, plots=0){
+sim_plots <- function(data, group, plots=0, same_scale=TRUE){
   df_data <- data.frame()
   for (i in seq_along(1:length(data))) {
     df <- data.frame("power_nmin" = data[[i]]$actual_power_nmin, 
@@ -33,22 +33,49 @@ sim_plots <- function(data, group, plots=0){
   df_data$method <- as.factor(df_data$method)
   df_data$method <- relevel(df_data$method, "ttest")
   
+  if(same_scale == TRUE){
   plot1 <- ggplot(df_data, aes(x = power_nmin))+ 
     geom_histogram(fill = "grey", color = "black", position = "identity")+
     geom_vline(aes(xintercept = mean, group = group), color = "red")+
     geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
     facet_wrap(group ~.) +
+    xlab("Actual Power")+
+    ylab("Count")+
     theme_bw()
   plot2 <- ggplot(df_data, aes(x = power_nmin, fill = method, colour = method))+ 
     facet_wrap(group ~.) +
-    geom_histogram(alpha = 0.2, position = "identity")+
-    scale_colour_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
-    scale_fill_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
+    geom_histogram(alpha = 0.3, position = "identity")+
+    scale_colour_manual(values = c("PO" = "#7CAE00", "ttest" = "#00008B", "WMW" = "#C77CFF")) +
+    scale_fill_manual(values = c("PO" = "#7CAE00", "ttest" = "#00008B", "WMW" = "#C77CFF")) +
     geom_vline(aes(xintercept = mean, group = group), color = "red")+
     geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+    xlab("Actual Power")+
+    ylab("Count")+
+    labs(colour="Method", fill="Method")+
     theme_bw()
+  } else if(same_scale == FALSE){
+    plot1 <- ggplot(df_data, aes(x = power_nmin))+ 
+      geom_histogram(fill = "grey", color = "black", position = "identity")+
+      geom_vline(aes(xintercept = mean, group = group), color = "red")+
+      geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+      facet_wrap(group ~., scales="free_y") +
+      xlab("Actual Power")+
+      ylab("Count")+
+      theme_bw()
+    plot2 <- ggplot(df_data, aes(x = power_nmin, fill = method, colour = method))+ 
+      facet_wrap(group ~., scales="free_y") +
+      geom_histogram(alpha = 0.3, position = "identity")+
+      scale_colour_manual(values = c("PO" = "#7CAE00", "ttest" = "#00008B", "WMW" = "#C77CFF")) +
+      scale_fill_manual(values = c("PO" = "#7CAE00", "ttest" = "#00008B", "WMW" = "#C77CFF")) +
+      geom_vline(aes(xintercept = mean, group = group), color = "red")+
+      geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+      xlab("Actual Power")+
+      ylab("Count")+
+      labs(colour="Method", fill="Method")+
+      theme_bw()
+  }
   if(plots==0){
-  grid.arrange(plot1, plot2)
+  grid.arrange(plot1, plot2, ncol=2)
   } else if(plots==1){
     return(plot1)
   } else if(plots == 2){
@@ -57,8 +84,7 @@ sim_plots <- function(data, group, plots=0){
 }
 
 ### different r #####
-vary_r <- function(p_C, p_E, n_pilot = 10000, niter = 10000){
-  r_vec <- c(0.2, 0.4, 0.6, 0.8, 1)
+vary_r <- function(p_C, p_E, n_pilot = 10000, niter = 10000, r_vec=c(0.1, 0.3, 0.5, 0.7, 0.9, 1)){
   results <- vector(mode = "list", length = length(r_vec))
   for (i in seq_along(r_vec)) {
     sim <- simulation(p_C, p_E, n_pilot=n_pilot, niter=niter, r=r_vec[i])
@@ -75,44 +101,86 @@ for (i in seq_along(1:length(sim_r))) {
 }
 mean_sim_r
 
-sim_plots(sim_r, c(0.2, 0.4, 0.6, 0.8, 1))
+sim_plots(sim_r, c(0.1, 0.3, 0.5, 0.7, 0.9, 1))
 
 ## for small n_pilot, to see what it looks like in a scenario with sample size hacking
-sim_r_small <- vary_r(p_C, p_E, n_pilot = 500)
-sim_plots(sim_r_small, c(0.2, 0.4, 0.6, 0.8, 1))
+sim_r_small <- vary_r(p_C, p_E, n_pilot = 200)
+sim_plots(sim_r_small, c(0.1, 0.3, 0.5, 0.7, 0.9, 1))
 
 sim_r_1000 <- vary_r(p_C, p_E, n_pilot = 1000)
-sim_plots(sim_r_1000, c(0.2, 0.4, 0.6, 0.8, 1))
+sim_plots(sim_r_1000, c(0.1, 0.3, 0.5, 0.7, 0.9, 1))
 
+# look at it for a smaller treatment effect
+p_C_theta <- p_C
+p_E_theta <- calc_p_E(p_C, theta_A = log(1.2))
 
+sim_r_small_eff <- vary_r(p_C_theta, p_E_theta, n_pilot = 1000)
+sim_plots(sim_r_small_eff, c(0.1, 0.3, 0.5, 0.7, 0.9, 1))
+
+### make a scatter plot
+### more r values, to more points in the scatter plot
+sim_r_scatter <- vary_r(p_C, p_E, n_pilot=1000,r_vec=seq(0.1,1,0.1))
+sim_r_scatter2 <- vary_r(p_C, p_E, n_pilot=10000,r_vec=seq(0.1,1,0.1))
+
+# make a scatter plot with the mean actual Power
+mean_min_power_r <- c()
+for(i in seq(1:length(sim_r_scatter))){
+  mean_min_power_r[i] <- mean(sim_r_scatter[[i]]$actual_power_nmin)
+}
+
+sim_r_df <- data.frame("p"=seq(0.1,1,0.1), "nmin_power"=mean_min_power_r)
+ggplot(sim_r_df, aes(x=p, y=nmin_power)) +
+  geom_point()+
+  geom_hline(yintercept=0.8, color = "red", linetype = "dotted")+
+  xlab("Allocation Ratio")+
+  ylab("Mean Actual Power")+
+  theme_bw()
 ### vary p_C and p_E #####
 ## vary effect size theta
-vary_p_theta <- function(n_pilot = 1000, niter = 10000, r = 1, cat = 6){
-  theta_vec <- log(seq(0.1, 2.5, 0.4))
+vary_p_theta <- function(n_pilot = 1000, niter = 10000, r = 1, cat = 6, theta_vec=log(seq(0.1, 2.5, 0.4))){
   p_results <- data.frame()
   results <- vector(mode = "list", length = length(theta_vec))
   for (i in seq_along(theta_vec)) {
     set.seed(1)
     p_C1 <- uniform_simplex(cat)[[1]] ## try random_simplex here
     p_E1 <- calc_p_E(p_C1, theta_A = theta_vec[i])
+    noise <- runif(cat, min = 0.95, max = 1.05) # Add random noise, so PO assumption isnt fulfilled and PO method doesnt have advantage
+    p_noisy <- p_E1 * noise  # Apply noise and normalize
+    p_E1 <- p_noisy/sum(p_noisy)
+    
     sim <- simulation(p_C1, p_E1, n_pilot=n_pilot, niter=niter, r=r)
     results[[i]] <- sim
   }
   return(results)
 }
 
-sim_p_theta_50 <- vary_p_theta(n_pilot = 50)
 sim_p_theta_100 <- vary_p_theta(n_pilot = 100) 
-sim_p_theta_500 <- vary_p_theta(n_pilot = 500) 
-sim_p_theta_1000 <- vary_p_theta(n_pilot = 1000)
-sim_p_theta_5000 <- vary_p_theta(n_pilot = 5000)
+sim_p_theta_1000 <- vary_p_theta(n_pilot = 1000, theta_vec = log(seq(0.2, 3.5, 0.4)))
+sim_p_theta_10000 <- vary_p_theta(n_pilot = 10000)
 
-sim_plots(sim_p_theta_50, paste0("log(",seq(0.1, 2.5, 0.4), ")"))
-sim_plots(sim_p_theta_100, paste0("log(",seq(0.1, 2.5, 0.4), ")"))
-sim_plots(sim_p_theta_500, paste0("log(",seq(0.1, 2.5, 0.4), ")"))
-sim_plots(sim_p_theta_1000, paste0("log(",seq(0.1, 2.5, 0.4), ")"))
-sim_plots(sim_p_theta_5000, paste0("log(",seq(0.1, 2.5, 0.4), ")"))
+sim_plots(sim_p_theta_100, paste0("log(",seq(0.1, 2.5, 0.4), ")", " = ", round(log(seq(0.1, 2.5, 0.4)), 2)))
+sim_plots(sim_p_theta_1000, paste0("log(",seq(0.2, 3.5, 0.4), ")", " = ", round(log(seq(0.2, 3.5, 0.4)), 2)))
+sim_plots(sim_p_theta_10000, paste0("log(",seq(0.1, 2.5, 0.4), ")", " = ", round(log(seq(0.1, 2.5, 0.4)), 2)))
 
+
+# make this with more odds ratio values, to make a nice scatter plot
+sim_p_scatter <- vary_p_theta(n_pilot = 1000, theta_vec = log(seq(0.1, 2.5, 0.1)))
+
+# make a scatter plot with the mean actual Power
+mean_min_power <- c()
+for(i in seq(1:length(sim_p_scatter))){
+  mean_min_power[i] <- mean(sim_p_scatter[[i]]$actual_power_nmin)
+}
+which(seq(0.1, 2.5, 0.1)==1, arr.ind = TRUE)
+mean_min_power[8]
+
+sim_p_df <- data.frame("p"=seq(0.1, 2.5, 0.1), "nmin_power"=mean_min_power)
+ggplot(sim_p_df, aes(x=p, y=nmin_power)) +
+  geom_point()+
+  geom_hline(yintercept=0.8, color = "red", linetype = "dotted")+
+  xlab("Odds Ratio")+
+  ylab("Mean Actual Power")+
+  theme_bw()
 
 # just repeat different p with the same bias and different seeds
 vary_p <- function(n_pilot = 1000, niter = 10000, r = 1, cat = 6, rep=10, theta = log(1.8)){
@@ -238,7 +306,7 @@ vary_norm_2 <- function(n_pilot = 1000, niter = 10000, r = 1, rep = 10, vec_leng
   results <- vector(mode = "list", length = rep)
   for (i in seq_along(1:rep)) {
     set.seed(i)
-    p_C_norm <- normal_vector(cat = ,vec_length, niter = niter, seed = i, theta_A = theta)[[1]]
+    p_C_norm <- normal_vector(cat = vec_length, niter = niter, seed = i, theta_A = theta)[[1]]
     p_E_norm <- normal_vector(cat = vec_length, niter = niter, seed = i, theta_A = theta)[[2]]
     sim <- simulation(p_C_norm, p_E_norm, r = r, niter = niter, n_pilot = n_pilot)
     results[[i]] <- sim
@@ -250,11 +318,19 @@ sim_norm_new <- vary_norm_2(n_pilot = 10000, rep=5)
 sim_plots(sim_norm_new, c(1:length(sim_norm_new)))
 
 # set effect size
-sim_norm_new2 <- vary_norm_2(n_pilot = 1000, rep=5, theta = log(1.8))
-sim_plots(sim_norm_new2, c(1:length(sim_norm_new2)))
+  sim_norm_new2 <- vary_norm_2(n_pilot = 1000, rep=1, theta = log(1.8))
+  sim_plots(sim_norm_new2, c(1:length(sim_norm_new2)))
+  # look at those high powered WMW sample sizes 
+  as.data.frame(sim_norm_new2[[1]]$actual_power[which(sim_norm_new2[[1]]$method == "WMW", arr.ind = TRUE),]) # the power is high for all methods
 
-sim_norm_new3 <- vary_norm_2(n_pilot = 10000, rep=1, theta = log(1.1))
+
+# with small treatment effect
+sim_norm_new3 <- vary_norm_2(n_pilot = 1000, rep=1, theta = log(1.1))
 sim_plots(sim_norm_new3, c(1:length(sim_norm_new3)))
+
+# with 3 categories
+sim_norm_new4 <- vary_norm_2(n_pilot = 1000, rep=1, theta = log(1.8), vec_length = 3)
+sim_plots(sim_norm_new4, c(1:length(sim_norm_new4)))
 
 ### different number of categories #####
 vary_prob_length <- function(n_pilot = 1000, niter = 10000, r = 1, seed = 1){
@@ -304,10 +380,29 @@ vary_prob_length_PO <- function(n_pilot = 1000, niter = 10000, r = 1, seed = 1, 
 }
 
 sim_cat_PO <- vary_prob_length_PO(n_pilot = 1000)
+sim_cat_PO[[13]] <- NULL
 sim_plots(sim_cat_PO, c(3:15))
 
 sim_cat_PO2 <- vary_prob_length_PO(n_pilot = 1000, theta = log(1.3))
 sim_plots(sim_cat_PO2, c(3:15))
+
+sim_cat_PO3 <- vary_prob_length_PO(n_pilot = 100, theta = log(1.8))
+sim_plots(sim_cat_PO3, c(3:15))
+
+### make a scatter plot
+# make a scatter plot with the mean actual Power
+mean_min_power_cat <- c()
+for(i in seq(1:length(sim_cat_PO))){
+  mean_min_power_cat[i] <- mean(sim_cat_PO[[i]]$actual_power_nmin)
+}
+
+sim_cat_df <- data.frame("p"=c(3:15), "nmin_power"=mean_min_power_cat)
+ggplot(sim_cat_df, aes(x=p, y=nmin_power)) +
+  geom_point()+
+  geom_hline(yintercept=0.8, color = "red", linetype = "dotted")+
+  xlab("Number of Categories")+
+  ylab("Mean Actual Power")+
+  theme_bw()
 
 #### try it with ad-hoc method
 vary_prob_length_ad_hoc <- function(n_pilot = 1000, niter = 10000, r = 1, seed = 1){
@@ -331,7 +426,7 @@ sim_plots(sim_cat_ad_hoc, c(3:15))
 
 ### different n_pilot #####
 vary_npilot <- function(p_C, p_E, niter = 10000, r = 1){
-  npilot_vec <- c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000, 20000)
+  npilot_vec <- c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000)
   results <- vector(mode = "list", length = length(npilot_vec))
   for (i in seq_along(npilot_vec)) {
     sim <- simulation(p_C, p_E, r = r, niter = niter, n_pilot = npilot_vec[i])
@@ -341,13 +436,14 @@ vary_npilot <- function(p_C, p_E, niter = 10000, r = 1){
 }
 
 sim_npilot <- vary_npilot(p_C, p_E)
+sim_npilot[[10]]<- NULL
 
-sim_plots(sim_npilot, c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000, 20000), plots=2)
+sim_plots(sim_npilot, c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000))
   
   
 mean_sim_npilot <- c()
 for (i in seq_along(1:length(sim_npilot))) {
-  mean_sim_npilot[[i]] <- mean(sim_npilot[[i]]$actual_power_nmin)
+  mean_sim_npilot[i] <- mean(sim_npilot[[i]]$actual_power_nmin)
 }
 mean_sim_npilot
 
@@ -355,7 +451,7 @@ mean_sim_npilot
 
 ### write function that does all this
 vary_niter <- function(p_C, p_E, n_pilot = 1000, r = 1){
-  niter_vec <- c(50, 250, 500, 1000, 2500, 5000, 10000, 15000, 20000)
+  niter_vec <- c(100, 500, 1000, 2500, 5000, 7500, 10000, 15000, 20000)
   results <- vector(mode = "list", length = length(niter_vec))
   for (i in seq_along(niter_vec)) {
     sim <- simulation(p_C, p_E, r = r, n_pilot = n_pilot, niter = niter_vec[i])
@@ -364,36 +460,29 @@ vary_niter <- function(p_C, p_E, n_pilot = 1000, r = 1){
   return(results)
 }
 
-sim_niter <- vary_niter(p_C, p_E, n_pilot = 10000)
+sim_niter <- vary_niter(p_C, p_E, n_pilot = 1000)
+sim_plots(sim_niter, c(100, 500, 1000, 2500, 5000, 7500, 10000, 15000, 20000), same_scale = FALSE)
 
-mean_sim_niter <- c()
-for (i in seq_along(1:length(sim_niter))) {
-  mean_sim_niter[[i]] <- mean(sim_niter[[i]]$actual_power_nmin)
+# mean and sd 
+m <- c()
+for(i in seq(1:length(sim_niter))){
+  m[i] <- mean(sim_niter[[i]]$actual_power_nmin)
 }
-mean_sim_niter
+mean(m)
 
-
-# show all histograms
-df_sim_niter <- data.frame()
-for (i in seq_along(1:length(sim_niter))) {
-  df <- data.frame("power_nmin" = sim_niter[[i]]$actual_power_nmin, 
-                   "method" = sim_niter[[i]]$method,
-                   "niter" = c(50, 250, 500, 1000, 2500, 5000, 10000, 15000, 20000)[i])
-  df_sim_niter <- rbind(df_sim_niter,df)
+for(i in seq(1:length(sim_niter))){
+  sd_i <- sd(sim_niter[[i]]$actual_power_nmin)
+  print(sd_i)
 }
-df_sim_niter <- df_sim_niter %>% group_by(niter) %>%  mutate(mean = mean(power_nmin))
+mean(sd_i)
 
-ggplot(df_sim_niter, aes(x = power_nmin))+ 
-  facet_wrap(niter ~.) +
-  geom_histogram(fill = "grey", color = "black", position = "identity")+
-  geom_vline(aes(xintercept = mean, group = niter), color = "red")+
-  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
-  
-  theme_bw()
-# separate by method
-ggplot(df_sim_niter, aes(x = power_nmin, fill = method, colour = method))+ 
-  facet_wrap(niter ~.,scales = "free") +
-  geom_histogram(alpha = 0.3, position = "identity")+
-  geom_vline(aes(xintercept = mean, group = niter), color = "red")+
-  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
-  theme_bw()
+# proportions of the methods
+prop <- data.frame("PO"=c(), "ttest"=c(), "WMW"=c())
+for (i in seq(1:length(sim_niter))) {
+  prop[i,1] <- length(which(sim_niter[[i]]$method == "PO"))/c(100, 500, 1000, 2500, 5000, 7500, 10000, 15000)[i]
+  prop[i,2] <- length(which(sim_niter[[i]]$method == "ttest"))/c(100, 500, 1000, 2500, 5000, 7500, 10000, 15000)[i]
+  prop[i,3] <- length(which(sim_niter[[i]]$method == "WMW"))/c(100, 500, 1000, 2500, 5000, 7500, 10000, 15000)[i]
+}
+prop
+
+

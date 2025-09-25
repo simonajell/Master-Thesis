@@ -94,8 +94,7 @@ sim_plots_biggest <- function(data, group, plots=0){
 }
 
 ### vary n_pilot for biggest sample size
-vary_npilot_biggest <- function(p_C, p_E, niter = 10000, r = 1){
-  npilot_vec <- c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000, 20000)
+vary_npilot_biggest <- function(p_C, p_E, niter = 10000, r = 1, npilot_vec=c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000)){
   results <- vector(mode = "list", length = length(npilot_vec))
   for (i in seq_along(npilot_vec)) {
     sim <- simulation_biggest(p_C, p_E, r = r, niter = niter, n_pilot = npilot_vec[i])
@@ -105,10 +104,28 @@ vary_npilot_biggest <- function(p_C, p_E, niter = 10000, r = 1){
 }
 
 sim_npilot_biggest <- vary_npilot_biggest(p_C, p_E)
+sim_npilot_biggest <- vary_npilot_biggest(p_C, p_E, npilot_vec = c(seq(150,1000,50), seq(1500, 12000, 500)))
 
 sim_plots_biggest(sim_npilot_biggest, c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000, 20000), plots=2)
 
 
 
+### scatter plot for min and max sample sizes
+mean_max_power_npilot <- c()
+for(i in seq(1:length(sim_npilot_biggest))){
+  mean_max_power_npilot[i] <- mean(sim_npilot_biggest[[i]]$actual_power_nmax, na.rm = TRUE)
+}
 
 
+sim_npilot_min_max <- data.frame("npilot"=c(seq(150,1000,50), seq(1500, 12000, 500)), 
+                                 "min"=sim_small_test[[1]][,2], 
+                                 "max"=mean_max_power_npilot) %>%
+  pivot_longer(!npilot, names_to = "min_or_max", values_to = "power")
+ggplot(sim_npilot_min_max) +
+  geom_point(mapping = aes(x=npilot, y=power, colour = min_or_max))+
+  geom_line(mapping = aes(x=npilot, y=power, colour = min_or_max))+
+  geom_hline(yintercept=0.8, color = "red", linetype = "dotted")+
+  scale_colour_manual(values = c("min" = "#CD661D", "max" = "#191970")) +
+  xlab("Pilot Study Sample Size")+
+  ylab("Mean Actual Power")+
+  theme_bw()

@@ -41,7 +41,7 @@ normal_simplex_theta <- function(n, favored_cat, theta=log(1.8)) {
   return(list(y,y1))
 }
 # Boulesteix idea fo how to generate the vectors
-
+# either calculate p_E with random noise form p_C or with a treatment effect theta_A
 normal_vector <- function(cat, niter=10000, theta_A = NA, seed = 1){
   set.seed(seed)
   # sample normally distributed values
@@ -52,15 +52,18 @@ normal_vector <- function(cat, niter=10000, theta_A = NA, seed = 1){
   # cut the values up into categories
   samp_df$category <- cut(samp_df$value, 
                           breaks=c(seq(min(samp_norm), max(samp_norm), breaks_norm)), 
-                          labels=c(1:cat_norm)) 
+                          labels=c(1:cat)) 
   p <- prop.table(table(samp_df$category))
   if(is.na(theta_A)){
-    noise <- runif(n, min = 0.15, max = 0.3) # Add random noise
+    noise <- runif(cat, min = 0.15, max = 0.3) # Add random noise
     p_noisy <- p * noise  # Apply noise and normalize
     p2 <- p_noisy/sum(p_noisy)
     p2 <- p2/sum(p2)
   } else{
     p2 <- calc_p_E(p, theta_A = theta_A)
+    noise <- runif(cat, min = 0.95, max = 1.05) # Add random noise
+    p_noisy <- p2 * noise  # Apply noise and normalize
+    p2 <- p_noisy/sum(p_noisy)
     p2 <- p2/sum(p2)
   }
   return(list(p, p2))
@@ -644,7 +647,6 @@ generate.pEpC.estimate<-function(p_C, p_E, r, n_pilot){
   list(C=phat_C,E=phat_E)
 }
 
-
 # This function (written by ALB) returns the distribution of the needed sample sizes calculated using methods ttest_ord, AfS and PO over niter pilot datasets.
 
 simulation<-function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05,beta=0.2){
@@ -809,6 +811,8 @@ grid.arrange(ggplot(df_test1000, aes(x = power_nmin))+
   geom_histogram(fill = "grey", color = "black", position = "identity")+
   geom_vline(aes(xintercept = mean), color = "red")+
   geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+    xlab("Actual Power")+
+    ylab("Count")+
   theme_bw(),
 ggplot(df_test1000, aes(x = power_nmin, fill = method, colour = method))+ 
   geom_histogram(alpha = 0.3, position = "identity")+
@@ -816,6 +820,8 @@ ggplot(df_test1000, aes(x = power_nmin, fill = method, colour = method))+
   scale_colour_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
   scale_fill_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
   geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+  xlab("Actual Power")+
+  ylab("Count")+
   theme_bw())
 
 # show the powers separated
@@ -962,6 +968,8 @@ sim_small_test <- settings(n_vector = c(seq(150,1000,50), seq(1500, 12000, 500))
 ggplot(sim_small_test[[1]], aes(x=n_pilot, y=nmin_power)) +
   geom_point()+
   geom_hline(yintercept=0.8, color = "red", linetype = "dotted")+
+  xlab("Pilot Study Sample Size")+
+  ylab("Mean Actual Power")+
   theme_bw()
 
 
@@ -979,7 +987,10 @@ ggplot(sim_small_test[[2]], aes(x=n_pilot, y=min_n_power, color = method)) +
 sim_test <- settings(n_vector = c(seq(150,1000,50), seq(1500, 12000, 500)), p_C, p_E, r, niter = 1000)
 ggplot(sim_test[[1]], aes(x=n_pilot, y=nmin_power)) +
   geom_point()+
-  geom_hline(yintercept=0.8, color = "red")
+  geom_hline(yintercept=0.8, color = "red", linetype = "dotted")+
+  xlab("Pilot Study Sample Size")+
+  ylab("Mean Actual Power")+
+  theme_bw()
 
 # now with more iterations, to get rid of the variation
 sim_test_iter <- settings(n_vector = c(seq(150,1000,50), seq(1500, 12000, 500)), p_C, p_E, r, niter = 10000)
@@ -1163,9 +1174,3 @@ ggplot(df10000_norm, aes(x = power_nmin, fill = method, colour = method)) +
 length(which(test10000_norm$method == "PO"))/10000
 length(which(test10000_norm$method == "ttest"))/10000
 length(which(test10000_norm$method == "AfS"))/10000
-
-
-##### Sensitivitätsanalyse, schließe pilotstudien mit großen und kleinen effekten aus
-
-
-
