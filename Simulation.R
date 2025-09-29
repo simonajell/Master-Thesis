@@ -710,6 +710,10 @@ legend("topleft", legend = levels(factor(test50$method)),
 df50 <- data.frame("power_nmin" = test50$actual_power_nmin, "method" = test50$method)
 ggplot(df50, aes(x = power_nmin, fill = method, colour = method)) + 
   geom_histogram(alpha = 0.3, position = "identity")
+# proportions of methods
+length(which(test50$method == "PO"))/100
+length(which(test50$method == "ttest"))/100
+length(which(test50$method == "WMW"))/100
 
 ### n_pilot = 100
 test100<-simulation(p_C,p_E,n_pilot=100,niter=10000)
@@ -722,6 +726,11 @@ max(test100$n_needed)
 # range of all estimated power
 min(test100$actual_power_nmin)
 max(test100$actual_power_nmin)
+
+# proportions of methods
+length(which(test100$method == "PO"))/100
+length(which(test100$method == "ttest"))/100
+length(which(test100$method == "WMW"))/100
 
 # plot the histograms
 df_test100 <- data.frame()
@@ -769,6 +778,15 @@ ggplot(test100$n_needed)+
   geom_histogram(mapping = aes(x=ttestord), alpha = 0.3, fill="#7CAE00", color="#7CAE00")+
   xlim(0,5000)
 
+### n_pilot = 200
+test200<-simulation(p_C,p_E,n_pilot=200,niter=10000)
+mean(test200$actual_power_nmin)
+
+# proportions of methods
+length(which(test200$method == "PO"))/100
+length(which(test200$method == "ttest"))/100
+length(which(test200$method == "WMW"))/100
+
 
 ### n_pilot = 500
 test500<-simulation(p_C,p_E,n_pilot=500,niter=10000)
@@ -786,8 +804,10 @@ legend("topleft", legend = levels(factor(test500$method)),
 df500 <- data.frame("power_nmin" = test500$actual_power_nmin, "method" = test500$method)
 ggplot(df500, aes(x = power_nmin, fill = method, colour = method)) + 
   geom_histogram(alpha = 0.3, position = "identity")
-length(which(test500$method == "PO"))/10000
-length(which(test500$method == "ttest"))/10000
+# proportions of methods
+length(which(test500$method == "PO"))/100
+length(which(test500$method == "ttest"))/100
+length(which(test500$method == "WMW"))/100
 
 #### n_pilot = 1000
 test1000<-simulation(p_C, p_E, n_pilot=1000, niter=10000)
@@ -882,8 +902,10 @@ legend("topleft", legend = levels(factor(test10000$method)),
 df10000 <- data.frame("power_nmin" = test10000$actual_power_nmin, "method" = test10000$method)
 ggplot(df10000, aes(x = power_nmin, fill = method, colour = method)) + 
   geom_histogram(alpha = 0.3, position = "identity")
-length(which(test10000$method == "PO"))/10000
-length(which(test10000$method == "ttest"))/10000
+# proportions of methods
+length(which(test10000$method == "PO"))/100
+length(which(test10000$method == "ttest"))/100
+length(which(test10000$method == "WMW"))/100
 
 ggplot(test10000$n_needed)+
   geom_histogram(mapping = aes(x=WMW), alpha = 0.3, fill="#C77CFF", color="#C77CFF")+
@@ -894,6 +916,7 @@ ggplot(test10000$actual_power)+
   geom_histogram(mapping = aes(x=po), alpha = 0.3, fill="#00BFC4", color="#00BFC4")+
   geom_histogram(mapping = aes(x=ttestord), alpha = 0.3, fill="#7CAE00", color="#7CAE00")
 
+### n_pilot = 15000
 test15000<-simulation(p_C,p_E,n_pilot=15000,niter=10000)
 mean(test15000$actual_power_nmin)
 hist(test15000$actual_power_nmin)
@@ -903,6 +926,9 @@ legend("topleft", legend = levels(factor(test15000$method)),
 df15000 <- data.frame("power_nmin" = test15000$actual_power_nmin, "method" = test15000$method)
 ggplot(df15000, aes(x = power_nmin, fill = method, colour = method)) + 
   geom_histogram(alpha = 0.3, position = "identity")
+# proportions of methods
+length(which(test15000$method == "PO"))/100
+length(which(test15000$method == "ttest"))/100
 
 ### for r=0.8
 test1000_0.8<-simulation(p_C,p_E,n_pilot=1000,niter=10000, r=0.8)

@@ -107,8 +107,24 @@ sim_plots(sim_r, c(0.1, 0.3, 0.5, 0.7, 0.9, 1))
 sim_r_small <- vary_r(p_C, p_E, n_pilot = 200)
 sim_plots(sim_r_small, c(0.1, 0.3, 0.5, 0.7, 0.9, 1))
 
+sim_r_small_500 <- vary_r(p_C, p_E, n_pilot = 500)
+sim_plots(sim_r_small_500, c(0.1, 0.3, 0.5, 0.7, 0.9, 1))
+
 sim_r_1000 <- vary_r(p_C, p_E, n_pilot = 1000)
-sim_plots(sim_r_1000, c(0.1, 0.3, 0.5, 0.7, 0.9, 1))
+sim_plots(sim_r_1000, c(0.1, 0.3, 0.5, 0.7, 0.9, 1), plots = 2)
+
+#Proportions:
+## 0.1: PO=79.82%  T-Test=6.59%   WMW=13.59%
+## 0.3: PO=91.67%  T-Test=5.37%   WMW=2.96%
+## 0.5: PO=82.86%  T-Test=16.9%   WMW=0.24%
+## 0.7: PO=66.37%  T-Test=33.63%  WMW=0
+## 0.9: PO=52.34%  T-Test=47.66%  WMW=0
+## 1:   PO=44.99%  T-Test=55.01%  WMW=0
+# proportions of methods
+length(which(sim_r_1000[[6]]$method == "PO"))/100
+length(which(sim_r_1000[[6]]$method == "ttest"))/100
+length(which(sim_r_1000[[6]]$method == "WMW"))/100
+
 
 # look at it for a smaller treatment effect
 p_C_theta <- p_C
@@ -446,6 +462,13 @@ for (i in seq_along(1:length(sim_npilot))) {
   mean_sim_npilot[i] <- mean(sim_npilot[[i]]$actual_power_nmin)
 }
 mean_sim_npilot
+
+
+sd_sim_npilot <- c()
+for (i in seq_along(1:length(sim_npilot))) {
+  sd_sim_npilot[i] <- sd(sim_npilot[[i]]$actual_power_nmin)
+}
+sd_sim_npilot
 
 ### different iterations #####
 

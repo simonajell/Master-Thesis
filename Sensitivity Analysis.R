@@ -45,7 +45,7 @@ hist(test_sens$actual_power_nmin)
 hist(test100$actual_power_nmin)
 mean(test100$actual_power_nmin)
 
-## exclude pilot studies that are to far off from true probabilities
+## exclude pilot studies that are too far off from true probabilities
 simulation_diff_effect<-function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05,beta=0.2, effect_cut){
   n_needed<-matrix(NA,niter,4)
   colnames(n_needed)<-c("AfS","ttestord", "po", "index")
@@ -87,9 +87,25 @@ length(test_eff_cut$actual_power_nmin)
 mean(test_eff_cut$actual_power_nmin)
 hist(test_eff_cut$actual_power_nmin)
 
+df_eff_cut <-  data.frame("power"=test_eff_cut$actual_power_nmin)%>% 
+  mutate(mean = mean(power))
+df_eff_no_cut <-  data.frame("power_no_cut"=test100$actual_power_nmin)%>% 
+  mutate(mean = mean(power_no_cut))
+ggplot(df_eff_cut, aes(x = power)) + 
+  geom_histogram(data=df_eff_no_cut, mapping=aes(x=power_no_cut),alpha=0.15, fill = "red", color = "darkgrey",position = "identity") +
+  geom_histogram(fill = "grey", color = "black",position = "identity") +
+  geom_vline(aes(xintercept = mean), color = "red")+
+  geom_vline(data=df_eff_no_cut, aes(xintercept = mean), color = "red", alpha=0.5)+
+  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+  xlab("Actual Power")+
+  ylab("Count")+
+  theme_bw()
+
 # without exclusion
 hist(test100$actual_power_nmin)
 mean(test100$actual_power_nmin)
+
+
 
 test_eff_cut2 <- simulation_diff_effect(p_C, p_E, n_pilot=50, niter=10000, effect_cut = 0.15)
 length(test_eff_cut2$actual_power_nmin)

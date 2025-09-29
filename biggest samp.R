@@ -44,9 +44,10 @@ df_max1000 <- data.frame("power_nmax" = max1000$actual_power_nmax,
 df_max1000$method <- as.factor(df_max1000$method)
 df_max1000$method <- relevel(df_max1000$method, "ttest")
 
+
 grid.arrange(ggplot(df_max1000, aes(x = power_nmax))+ 
                geom_histogram(fill = "grey", color = "black", position = "identity")+
-               geom_vline(aes(xintercept = mean), color = "red")+
+               geom_vline(aes(xintercept = mean()), color = "red")+
                geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
                theme_bw(),
              ggplot(df_max1000, aes(x = power_nmax, fill = method, colour = method))+ 
@@ -70,9 +71,13 @@ sim_plots_biggest <- function(data, group, plots=0){
   df_data$method <- as.factor(df_data$method)
   df_data$method <- relevel(df_data$method, "ttest")
   
+  df_means <- df_data %>%
+    group_by(group) %>%
+    summarise(mean_val = mean(power_nmax, na.rm = TRUE))
+  
   plot1 <- ggplot(df_data, aes(x = power_nmax))+ 
     geom_histogram(fill = "grey", color = "black", position = "identity")+
-    geom_vline(aes(xintercept = mean, group = group), color = "red")+
+    geom_vline(data = df_means, aes(xintercept = mean_val), color = "red")+
     geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
     facet_wrap(group ~.) +
     theme_bw()
@@ -81,7 +86,7 @@ sim_plots_biggest <- function(data, group, plots=0){
     geom_histogram(alpha = 0.2, position = "identity")+
     scale_colour_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
     scale_fill_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
-    geom_vline(aes(xintercept = mean, group = group), color = "red")+
+    geom_vline(data = df_means, aes(xintercept = mean_val), color = "red")+
     geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
     theme_bw()
   if(plots==0){
@@ -103,10 +108,10 @@ vary_npilot_biggest <- function(p_C, p_E, niter = 10000, r = 1, npilot_vec=c(50,
   return(results)
 }
 
-sim_npilot_biggest <- vary_npilot_biggest(p_C, p_E)
+sim_npilot_biggest_normal <- vary_npilot_biggest(p_C, p_E)
 sim_npilot_biggest <- vary_npilot_biggest(p_C, p_E, npilot_vec = c(seq(150,1000,50), seq(1500, 12000, 500)))
 
-sim_plots_biggest(sim_npilot_biggest, c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000, 20000), plots=2)
+sim_plots_biggest(sim_npilot_biggest_normal, c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000, 20000))
 
 
 
