@@ -93,25 +93,32 @@ vary_r <- function(p_C, p_E, n_pilot = 10000, niter = 10000, r_vec=c(0.1, 0.3, 0
   return(results)
 }
 
-sim_r <- vary_r(p_C, p_E)
 
+sim_r_100 <- vary_r(p_C, p_E, n_pilot = 100, r_vec=c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)))
+sim_plots(sim_r_100, c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)))
+
+sim_r_1000 <- vary_r(p_C, p_E, n_pilot = 1000, r_vec=c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)))
+sim_plots(sim_r_1000, c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)))
+# mean actual power
 mean_sim_r <- c()
-for (i in seq_along(1:length(sim_r))) {
-  mean_sim_r[[i]] <- mean(sim_r[[i]]$actual_power_nmin)
+for (i in seq_along(1:length(sim_r_1000))) {
+  mean_sim_r[i] <- mean(sim_r_1000[[i]]$actual_power_nmin)
 }
-mean_sim_r
+min(mean_sim_r)
 
-sim_plots(sim_r, c(0.1, 0.3, 0.5, 0.7, 0.9, 1))
-
-## for small n_pilot, to see what it looks like in a scenario with sample size hacking
-sim_r_small <- vary_r(p_C, p_E, n_pilot = 200)
-sim_plots(sim_r_small, c(0.1, 0.3, 0.5, 0.7, 0.9, 1))
-
-sim_r_small_500 <- vary_r(p_C, p_E, n_pilot = 500)
-sim_plots(sim_r_small_500, c(0.1, 0.3, 0.5, 0.7, 0.9, 1))
-
-sim_r_1000 <- vary_r(p_C, p_E, n_pilot = 1000)
-sim_plots(sim_r_1000, c(0.1, 0.3, 0.5, 0.7, 0.9, 1), plots = 2)
+# mean min sample sizes
+mean_sim_r_samp <- c()
+for (i in seq_along(1:length(sim_r_1000))) {
+  mean_sim_r_samp[i] <- mean(sim_r_1000[[i]]$nmin)
+}
+mean_sim_r_samp
+mean_sim_r_samp[6]-mean_sim_r_samp[5]
+# smallest sd of power values
+sd_min_power_r <- c()
+for(i in seq(1:length(sim_r_1000))){
+  sd_min_power_r[i] <- sd(sim_r_1000[[i]]$actual_power_nmin)
+}
+min(sd_min_power_r)
 
 #Proportions:
 ## 0.1: PO=79.82%  T-Test=6.59%   WMW=13.59%
@@ -124,7 +131,36 @@ sim_plots(sim_r_1000, c(0.1, 0.3, 0.5, 0.7, 0.9, 1), plots = 2)
 length(which(sim_r_1000[[6]]$method == "PO"))/100
 length(which(sim_r_1000[[6]]$method == "ttest"))/100
 length(which(sim_r_1000[[6]]$method == "WMW"))/100
-
+### compare sample sizes
+df_r_samp <- data.frame()
+for (i in seq_along(1:length(sim_r_1000))) {
+  df <- data.frame("nmin" = sim_r_1000[[i]]$nmin, 
+                   "method" = sim_r_1000[[i]]$method,
+                   "group" = c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1))[i])
+  df_r_samp <- rbind(df_r_samp,df)
+}
+df_r_samp <- df_r_samp %>% group_by(group) %>%  mutate(mean = mean(nmin)) 
+df_r_samp <- df_r_samp[df_r_samp$nmin <= 3000, ]
+df_r_samp$method <- as.factor(df_r_samp$method)
+df_r_samp$method <- relevel(df_r_samp$method, "ttest")
+ggplot(df_r_samp, aes(x = nmin))+ 
+    geom_histogram(fill = "grey", color = "black", position = "identity")+
+    geom_vline(aes(xintercept = mean, group = group), color = "red")+
+    facet_wrap(group ~.) +
+    xlab("Min Sample Size")+
+    ylab("Count")+
+    theme_bw()
+ggplot(df_r_samp, aes(x = nmin, fill = method, colour = method))+ 
+    facet_wrap(group ~.) +
+    geom_histogram(alpha = 0.3, position = "identity")+
+    scale_colour_manual(values = c("PO" = "#7CAE00", "ttest" = "#00008B", "WMW" = "#C77CFF")) +
+    scale_fill_manual(values = c("PO" = "#7CAE00", "ttest" = "#00008B", "WMW" = "#C77CFF")) +
+    geom_vline(aes(xintercept = mean, group = group), color = "red")+
+    xlab("Min Sample Size")+
+    ylab("Count")+
+    labs(colour="Method", fill="Method")+
+    theme_bw()
+min(df_r_samp$mean)
 
 # look at it for a smaller treatment effect
 p_C_theta <- p_C
@@ -140,11 +176,18 @@ sim_r_scatter2 <- vary_r(p_C, p_E, n_pilot=10000,r_vec=seq(0.1,1,0.1))
 
 # make a scatter plot with the mean actual Power
 mean_min_power_r <- c()
-for(i in seq(1:length(sim_r_scatter))){
-  mean_min_power_r[i] <- mean(sim_r_scatter[[i]]$actual_power_nmin)
+for(i in seq(1:length(sim_r_1000))){
+  mean_min_power_r[i] <- mean(sim_r_1000[[i]]$actual_power_nmin)
 }
+# smallest sd of power values
+sd_min_power_r_scatter <- c()
+for(i in seq(1:length(sim_r_1000))){
+  sd_min_power_r_scatter[i] <- sd(sim_r_1000[[i]]$actual_power_nmin)
+}
+min(sd_min_power_r_scatter)
 
-sim_r_df <- data.frame("p"=seq(0.1,1,0.1), "nmin_power"=mean_min_power_r)
+
+sim_r_df <- data.frame("p"=c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)), "nmin_power"=mean_min_power_r)
 ggplot(sim_r_df, aes(x=p, y=nmin_power)) +
   geom_point()+
   geom_hline(yintercept=0.8, color = "red", linetype = "dotted")+
@@ -334,8 +377,10 @@ sim_norm_new <- vary_norm_2(n_pilot = 10000, rep=5)
 sim_plots(sim_norm_new, c(1:length(sim_norm_new)))
 
 # set effect size
-  sim_norm_new2 <- vary_norm_2(n_pilot = 1000, rep=1, theta = log(1.8))
-  sim_plots(sim_norm_new2, c(1:length(sim_norm_new2)))
+# use same odds ratio as p_C and p_E have, to make it comparable to the other simulations
+exp(calculate_theta_A(p_C,p_E)[1,1])
+sim_norm_new2 <- vary_norm_2(n_pilot = 1000, rep=1, theta = log(0.4821251), vec_length = 4)
+sim_plots(sim_norm_new2, c(1:length(sim_norm_new2)))
   # look at those high powered WMW sample sizes 
   as.data.frame(sim_norm_new2[[1]]$actual_power[which(sim_norm_new2[[1]]$method == "WMW", arr.ind = TRUE),]) # the power is high for all methods
 

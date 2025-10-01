@@ -47,7 +47,7 @@ df_max1000$method <- relevel(df_max1000$method, "ttest")
 
 grid.arrange(ggplot(df_max1000, aes(x = power_nmax))+ 
                geom_histogram(fill = "grey", color = "black", position = "identity")+
-               geom_vline(aes(xintercept = mean()), color = "red")+
+               geom_vline(aes(xintercept = mean), color = "red")+
                geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
                theme_bw(),
              ggplot(df_max1000, aes(x = power_nmax, fill = method, colour = method))+ 

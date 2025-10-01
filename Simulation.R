@@ -486,7 +486,7 @@ plot(comp_w_k5[[1]]$n_total, comp_w_k5[[2]]$n_total)
 # look at Power:
 mean(comp_w_k5[[1]]$actual_power - comp_w_k5[[2]]$actual_power)
 
-############# Wilcoxon- Mann- Whitney Method ###################################
+############# Wilcoxon-Mann-Whitney Method ###################################
 # This function calculates pi_A based on p_E and p_C
 # Kieser Formula 4.4
 calculate_pi_A<-function(p_C,p_E)
@@ -634,6 +634,29 @@ c_ttest_2 <- comp_ttest(iter = 10000, r = 0.4)
 length(which(c_ttest_2[[1]]$n_total == c_ttest_2[[2]]$n_total))/10000 # for r=0.8 the sample size is always the same
 
 
+############# Visualization allocation ratio and sample size ##########
+all_rat <- function(n=100, r_vec=c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1))){
+  n_C_vec <- c()
+  n_E_vec <- c()
+  for (r in seq_along(1:length(r_vec))) {
+    n_E_vec[r] <- ceiling(r_vec[r]/(1+r_vec[r]) * n)
+    n_C_vec[r] <- ceiling(1/(1+r_vec[r]) * n)
+  }
+  return(data.frame("n" = c(n_E_vec, n_C_vec), 
+                    "r" = rep(r_vec, 2),
+                    "group"=c(rep("n_E", length(n_E_vec)),rep("n_C", length(n_C_vec))) ) )
+}
+r_vec <- all_rat()
+
+ggplot(r_vec, aes(x=r, y=n, color=group))+
+  geom_line( )+
+  geom_point( )+
+  scale_color_manual(values = c("n_C" = "#669933", "n_E" = "#336699")) +
+  xlab("Sample Size")+
+  ylab("Allocation Ratio")+
+  theme_bw()
+
+
 ############# Simulation Functions #############################################
 # This function (written by ALB) generates RCT data of total size n_pilot with randomization ratio r and 
 # probability vectors p_C and p_E in the control and experimental arms, respectively, and returns the 
@@ -714,6 +737,12 @@ ggplot(df50, aes(x = power_nmin, fill = method, colour = method)) +
 length(which(test50$method == "PO"))/100
 length(which(test50$method == "ttest"))/100
 length(which(test50$method == "WMW"))/100
+# how big is the difference between biggest and smallest sample size
+diff_vec_50 <- c()
+for(i in seq_along(1:10000)){
+  diff_vec_50[i]<-max(test50$n_needed[i,]) - min(test50$n_needed[i,])
+}
+mean(diff_vec_50[is.finite(diff_vec_50)])
 
 ### n_pilot = 100
 test100<-simulation(p_C,p_E,n_pilot=100,niter=10000)
@@ -731,6 +760,13 @@ max(test100$actual_power_nmin)
 length(which(test100$method == "PO"))/100
 length(which(test100$method == "ttest"))/100
 length(which(test100$method == "WMW"))/100
+
+# how big is the difference between biggest and smallest sample size
+diff_vec_100 <- c()
+for(i in seq_along(1:10000)){
+  diff_vec_100[i]<-max(test100$n_needed[i,]) - min(test100$n_needed[i,])
+}
+mean(diff_vec_100[is.finite(diff_vec_100)])
 
 # plot the histograms
 df_test100 <- data.frame()
@@ -808,6 +844,12 @@ ggplot(df500, aes(x = power_nmin, fill = method, colour = method)) +
 length(which(test500$method == "PO"))/100
 length(which(test500$method == "ttest"))/100
 length(which(test500$method == "WMW"))/100
+# how big is the difference between biggest and smallest sample size
+diff_vec_500 <- c()
+for(i in seq_along(1:10000)){
+  diff_vec_500[i]<-max(test500$n_needed[i,]) - min(test500$n_needed[i,])
+}
+mean(diff_vec_500[is.finite(diff_vec_500)])
 
 #### n_pilot = 1000
 test1000<-simulation(p_C, p_E, n_pilot=1000, niter=10000)
@@ -878,6 +920,12 @@ ggplot(sim_1000_n, aes(x = n, y = ID, colour = method)) +
 length(which(test1000$method == "PO"))/10000
 length(which(test1000$method == "ttest"))/10000
 
+# how big is the difference between biggest and smallest sample size
+diff_vec_1000 <- c()
+for(i in seq_along(1:10000)){
+  diff_vec_1000[i]<-max(test1000$n_needed[i,]) - min(test1000$n_needed[i,])
+}
+mean(diff_vec_1000)
 
 
 #### n_pilot = 10000
@@ -964,6 +1012,20 @@ hist(test1000_0.2$actual_power_nmin)
 df1000_0.2 <- data.frame("power_nmin" = test1000_0.2$actual_power_nmin, "method" = test1000_0.2$method)
 ggplot(df1000_0.2, aes(x = power_nmin, fill = method, colour = method)) + 
   geom_histogram(alpha = 0.3, position = "identity")
+### show the powers separated and for all methods
+sim_1000_0.2_power <-  as.data.frame(test1000_0.2$actual_power) %>%
+  pivot_longer(everything(), names_to = "method", values_to = "power")
+ggplot(sim_1000_0.2_power, aes(x = power, fill = method, colour = method)) + 
+  geom_histogram(alpha = 0.3, position = "identity") +
+  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")
+
+# how big is the difference between biggest and smallest sample size
+diff_vec_0.2 <- c()
+for(i in seq_along(1:10000)){
+  diff_vec_0.2[i]<-max(test1000_0.2$n_needed[i,]) - min(test1000_0.2$n_needed[i,])
+}
+mean(diff_vec_0.2)
+
 
 test10000_0.2<-simulation(p_C,p_E,n_pilot=10000,niter=10000, r=0.2)
 mean(test10000_0.2$actual_power_nmin)

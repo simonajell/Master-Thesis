@@ -1,5 +1,5 @@
 # This function will calculate the needed sample size based on p_C and p_E for proportional odds regression
-###calculates sample size and actual allocation ratio r
+
 calculate_theta_A <- function(p_C, p_E, r = 1) {
   # Validate inputs
   if (length(p_C) != length(p_E)) {
@@ -36,8 +36,8 @@ calculate_theta_A <- function(p_C, p_E, r = 1) {
   alt <- data.frame("coef" = coef_alt, "Var" = var_alt)
   return(alt)
 }
+
 calculate_theta_N <- function(p_C, p_E, r = 1) {
-  # Null Hypothesis states: theta=0
   # Validate inputs
   if (length(p_C) != length(p_E)) {
     stop("p_C and p_E must have the same length (same number of outcome levels).")
@@ -48,14 +48,13 @@ calculate_theta_N <- function(p_C, p_E, r = 1) {
   
   K <- length(p_C)  # number of outcome levels
   
-  p_i <- (r*p_C+p_E)/(r+1) # expected value of estimand (e.g. risk difference)
-  # make both probabilities equal, so that theta = 0
-  
+  p_i <- (r*p_C+p_E)/(r+1) # expected value of estimand
+
   # Construct outcome levels and group labels
   outcome <- rep(c(1:K), times = 2)
   group <- c(rep(c("control"), times = K), rep(c("treatment"), times = K))
   
-  # Calculate weights under the alternative hypothesis
+  # Calculate weights under the null hypothesis
   weights_null <- c(((r * p_i) / (r + 1)), (p_i / (r + 1)))
   
   # Create synthetic dataset
@@ -65,7 +64,7 @@ calculate_theta_N <- function(p_C, p_E, r = 1) {
     weight = weights_null
   )
   
-  # Fit proportional odds model under the alternative
+  # Fit proportional odds model under the null hypothesis
   model_null <- suppressWarnings(
     polr(outcome ~ group, data = data_null, weights = weight, method = "logistic", Hess = TRUE)
   )
@@ -104,7 +103,7 @@ samp_size_PO_White_2023 <- function(p_C, p_E, alpha, beta, r, method){
   return(c("n_total"=n_total, "n_E"=n_E, "n_C"=n_C, "actual_r"=actual_r))
 }
 
-##### Estimation check of theta_A ####
+##### Estimation check of theta_A #####
 # check estimation precision of theta_A estimation
 ## calculate theta_A on probability vectors that fulfill the PO assumption repeatedly
 theta_comparison <- function(comp_iter, vec_length, r){
@@ -131,7 +130,7 @@ median(t_comp$diff) # 0.00033
 plot(t_comp$theta_A, t_comp$diff)  
 
 ##### Estimation check of variance N #####
-# check estimation of variance under null hypothesis compared to PO variance 
+# check estimation of variance under null hypothesis V_N compared to PO variance 
 ## calculate variance N on probability vectors that fulfill the PO assumption repeatedly and compare to variance of PO method
 var_comparison <- function(comp_iter, vec_length, r){
   var_results <- data.frame("theta_A" = c(NA), "var_w"=c(NA), "var_k" = c(NA), "diff" = c(NA))
@@ -163,7 +162,7 @@ plot(v_comp$theta_A, v_comp$diff)
 
 
 ##### Compare NN Method to Whitehead method #####
-# code to calculate PO sample size from Kieser formula
+# code to calculate PO sample size from (Kieser, 2020) formula 4.8
 samplesize_po <- function(p_C, p_E, alpha, beta, r){
   theta_A <- calculate_theta_A(p_C, p_E, r)[1,1]
   x = 0
@@ -171,7 +170,7 @@ samplesize_po <- function(p_C, p_E, alpha, beta, r){
     x = x + ((p_C[i] + r*p_E[i]) / (1 + r))^3
   }
   n <- (1+r)^2/r * 3*(qnorm(1-alpha/2) + qnorm(1-beta))^2 /
-    (theta_A^2 * (1-x)) # Kieser Formel 4.8
+    (theta_A^2 * (1-x)) # Kieser formula 4.8
   n_E <- ceiling(r/(1+r) * n)
   n_C <- ceiling(1/(1+r) * n)
   n_total <- n_E + n_C
