@@ -14,7 +14,9 @@ result_po_baud <- samplesize_po_NN(p_C=p_C_baud, p_E=p_E_baud, alpha=0.05, beta=
 c("AfS"=result_AfS_baud$n_total, "ttest"=result_ttestord_baud$n_total, "po"=result_po_baud$n_total)
 which.min(c("AfS"=result_AfS_baud$n_total, "ttest"=result_ttestord_baud$n_total, "po"=result_po_baud$n_total))
 # t-test calculates much smaller sample size
-
+#  man kann hald dann nicht die actual power berechnen, weil man die wahren prob. vektoren nicht kennt
+# wie viel bringt das dann wirklich?
+# oder soll ich die Wahrscheinlichkeiten als die Wahren nehmen?
 
 ### van den Berg LA, Dijkgraaf MG, Berkhemer OA, Fransen PS, Beumer D,
   # Lingsma HF, et al. Two-year outcome after endovascular treatment for

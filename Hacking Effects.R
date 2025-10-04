@@ -83,6 +83,33 @@ sim_plots <- function(data, group, plots=0, same_scale=TRUE){
   }
 }
 
+sim_ss_plots <- function(data, group, xlabel="Varied Component"){
+  df_samp <- data.frame()
+  for (i in seq_along(1:length(data))) {
+    df <- data.frame("nmin" = data[[i]]$nmin, 
+                     "group" = group[i])
+    df_samp <- rbind(df_samp,df)
+  }
+  
+  grid.arrange(  ggplot(df_samp) +
+                   geom_pointrange(mapping = aes(x=group,y=nmin),
+                                   stat = "summary",
+                                   fun = mean, size=0.3)+
+                   xlab(xlabel)+
+                   ylab("Mean Minimum Sample Size")+
+                   theme_bw(),
+                 ggplot(df_samp) +
+                   geom_pointrange(mapping = aes(x=group,y=nmin),
+                                   stat = "summary",
+                                   fun.min = function(z) {quantile(z,0.25)},
+                                   fun.max = function(z) {quantile(z,0.75)},
+                                   fun = median, size=0.3)+
+                   xlab(xlabel)+
+                   ylab("Median Minimum Sample Size with Quartiles")+
+                   theme_bw(),
+                 ncol=2
+  )
+}
 ### different r #####
 vary_r <- function(p_C, p_E, n_pilot = 10000, niter = 10000, r_vec=c(0.1, 0.3, 0.5, 0.7, 0.9, 1)){
   results <- vector(mode = "list", length = length(r_vec))
@@ -111,8 +138,11 @@ mean_sim_r_samp <- c()
 for (i in seq_along(1:length(sim_r_1000))) {
   mean_sim_r_samp[i] <- mean(sim_r_1000[[i]]$nmin)
 }
-mean_sim_r_samp
-mean_sim_r_samp[6]-mean_sim_r_samp[5]
+
+# plot the mean minimum sample size and the median min sample size with quartiles
+sim_ss_plots(data=sim_r_1000, group = c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)), xlabel="Allocation Ratio")
+
+
 # smallest sd of power values
 sd_min_power_r <- c()
 for(i in seq(1:length(sim_r_1000))){
@@ -214,11 +244,11 @@ vary_p_theta <- function(n_pilot = 1000, niter = 10000, r = 1, cat = 6, theta_ve
 }
 
 sim_p_theta_100 <- vary_p_theta(n_pilot = 100) 
-sim_p_theta_1000 <- vary_p_theta(n_pilot = 1000, theta_vec = log(seq(0.2, 3.5, 0.4)))
+sim_p_theta_1000 <- vary_p_theta(n_pilot = 1000, theta_vec = log(seq(0.1, 3.5, 0.3)))
 sim_p_theta_10000 <- vary_p_theta(n_pilot = 10000)
 
 sim_plots(sim_p_theta_100, paste0("log(",seq(0.1, 2.5, 0.4), ")", " = ", round(log(seq(0.1, 2.5, 0.4)), 2)))
-sim_plots(sim_p_theta_1000, paste0("log(",seq(0.2, 3.5, 0.4), ")", " = ", round(log(seq(0.2, 3.5, 0.4)), 2)))
+sim_plots(sim_p_theta_1000, paste0("log(",seq(0.1, 3.5, 0.3), ")", " = ", round(log(seq(0.1, 3.5, 0.3)), 2)))
 sim_plots(sim_p_theta_10000, paste0("log(",seq(0.1, 2.5, 0.4), ")", " = ", round(log(seq(0.1, 2.5, 0.4)), 2)))
 
 
@@ -450,11 +480,15 @@ sim_plots(sim_cat_PO2, c(3:15))
 sim_cat_PO3 <- vary_prob_length_PO(n_pilot = 100, theta = log(1.8))
 sim_plots(sim_cat_PO3, c(3:15))
 
+# same odds ratio as p_C and p_E
+sim_cat_PO_same <- vary_prob_length_PO(n_pilot = 1000, theta = log(0.4821251))
+sim_plots(sim_cat_PO_same, c(3:15))
+
 ### make a scatter plot
 # make a scatter plot with the mean actual Power
 mean_min_power_cat <- c()
-for(i in seq(1:length(sim_cat_PO))){
-  mean_min_power_cat[i] <- mean(sim_cat_PO[[i]]$actual_power_nmin)
+for(i in seq(1:length(sim_cat_PO_same))){
+  mean_min_power_cat[i] <- mean(sim_cat_PO_same[[i]]$actual_power_nmin)
 }
 
 sim_cat_df <- data.frame("p"=c(3:15), "nmin_power"=mean_min_power_cat)
@@ -464,6 +498,9 @@ ggplot(sim_cat_df, aes(x=p, y=nmin_power)) +
   xlab("Number of Categories")+
   ylab("Mean Actual Power")+
   theme_bw()
+
+## visualise the mean minimum sample size
+sim_ss_plots(sim_cat_PO_same, c(3:15), xlabel = "Number of Categories")
 
 #### try it with ad-hoc method
 vary_prob_length_ad_hoc <- function(n_pilot = 1000, niter = 10000, r = 1, seed = 1){
@@ -514,6 +551,12 @@ for (i in seq_along(1:length(sim_npilot))) {
   sd_sim_npilot[i] <- sd(sim_npilot[[i]]$actual_power_nmin)
 }
 sd_sim_npilot
+
+# plot the mean minimum sample size and the median min sample size with quartiles
+sim_ss_plots(data=sim_npilot, 
+             group = c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000),
+             xlabel="Pilot Study Sample Size")
+
 
 ### different iterations #####
 

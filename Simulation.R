@@ -767,6 +767,8 @@ for(i in seq_along(1:10000)){
   diff_vec_100[i]<-max(test100$n_needed[i,]) - min(test100$n_needed[i,])
 }
 mean(diff_vec_100[is.finite(diff_vec_100)])
+median(diff_vec_100)
+
 
 # plot the histograms
 df_test100 <- data.frame()
@@ -850,6 +852,7 @@ for(i in seq_along(1:10000)){
   diff_vec_500[i]<-max(test500$n_needed[i,]) - min(test500$n_needed[i,])
 }
 mean(diff_vec_500[is.finite(diff_vec_500)])
+median(diff_vec_500)
 
 #### n_pilot = 1000
 test1000<-simulation(p_C, p_E, n_pilot=1000, niter=10000)
@@ -879,12 +882,12 @@ grid.arrange(ggplot(df_test1000, aes(x = power_nmin))+
 ggplot(df_test1000, aes(x = power_nmin, fill = method, colour = method))+ 
   geom_histogram(alpha = 0.3, position = "identity")+
   geom_vline(aes(xintercept = mean), color = "red")+
-  scale_colour_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
-  scale_fill_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
+  scale_colour_manual(values = c("PO" = "#7CAE00", "ttest" = "#00008B", "WMW" = "#C77CFF")) +
+  scale_fill_manual(values = c("PO" = "#7CAE00", "ttest" = "#00008B", "WMW" = "#C77CFF")) +
   geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
   xlab("Actual Power")+
   ylab("Count")+
-  theme_bw())
+  theme_bw(), ncol=2)
 
 # show the powers separated
 sim_1000_power <-  as.data.frame(test1000$actual_power) %>%
@@ -926,6 +929,7 @@ for(i in seq_along(1:10000)){
   diff_vec_1000[i]<-max(test1000$n_needed[i,]) - min(test1000$n_needed[i,])
 }
 mean(diff_vec_1000)
+median(diff_vec_1000)
 
 
 #### n_pilot = 10000
@@ -978,6 +982,13 @@ ggplot(df15000, aes(x = power_nmin, fill = method, colour = method)) +
 length(which(test15000$method == "PO"))/100
 length(which(test15000$method == "ttest"))/100
 
+diff_vec_15000 <- c()
+for(i in seq_along(1:10000)){
+  diff_vec_15000[i]<-max(test15000$n_needed[i,]) - min(test15000$n_needed[i,])
+}
+mean(diff_vec_15000)
+median(diff_vec_15000)
+
 ### for r=0.8
 test1000_0.8<-simulation(p_C,p_E,n_pilot=1000,niter=10000, r=0.8)
 mean(test1000_0.8$actual_power_nmin)
@@ -986,24 +997,24 @@ df1000_0.8 <- data.frame("power_nmin" = test1000_0.8$actual_power_nmin, "method"
 ggplot(df1000_0.8, aes(x = power_nmin, fill = method, colour = method)) + 
   geom_histogram(alpha = 0.3, position = "identity")
 
-test10000_0.8<-simulation(p_C,p_E,n_pilot=10000,niter=10000, r=0.8)
-mean(test10000_0.8$actual_power_nmin)
-hist(test10000_0.8$actual_power_nmin)
-df10000_0.8 <- data.frame("power_nmin" = test10000_0.8$actual_power_nmin, "method" = test10000_0.8$method)
-ggplot(df10000_0.8, aes(x = power_nmin, fill = method, colour = method)) + 
-  geom_histogram(alpha = 0.3, position = "identity")
+diff_vec_0.8 <- c()
+for(i in seq_along(1:10000)){
+  diff_vec_0.8[i]<-max(test1000_0.8$n_needed[i,]) - min(test1000_0.8$n_needed[i,])
+}
+mean(diff_vec_0.8)
+median(diff_vec_0.8)
 
 ### for r=0.4
 test1000_0.4<-simulation(p_C,p_E,n_pilot=1000,niter=10000, r=0.4)
 mean(test1000_0.4$actual_power_nmin)
 hist(test1000_0.4$actual_power_nmin)
 
-test10000_0.4<-simulation(p_C,p_E,n_pilot=10000,niter=10000, r=0.4)
-mean(test10000_0.4$actual_power_nmin)
-hist(test10000_0.4$actual_power_nmin)
-df10000_0.4 <- data.frame("power_nmin" = test10000_0.4$actual_power_nmin, "method" = test10000_0.4$method)
-ggplot(df10000_0.4, aes(x = power_nmin, fill = method, colour = method)) + 
-  geom_histogram(alpha = 0.3, position = "identity")
+diff_vec_0.4 <- c()
+for(i in seq_along(1:10000)){
+  diff_vec_0.4[i]<-max(test1000_0.4$n_needed[i,]) - min(test1000_0.4$n_needed[i,])
+}
+mean(diff_vec_0.4)
+median(diff_vec_0.4)
 
 ### for r=0.2
 test1000_0.2<-simulation(p_C,p_E,n_pilot=1000,niter=10000, r=0.2)
@@ -1025,14 +1036,41 @@ for(i in seq_along(1:10000)){
   diff_vec_0.2[i]<-max(test1000_0.2$n_needed[i,]) - min(test1000_0.2$n_needed[i,])
 }
 mean(diff_vec_0.2)
+median(diff_vec_0.2)
 
 
-test10000_0.2<-simulation(p_C,p_E,n_pilot=10000,niter=10000, r=0.2)
-mean(test10000_0.2$actual_power_nmin)
-hist(test10000_0.2$actual_power_nmin)
-df10000_0.2 <- data.frame("power_nmin" = test10000_0.2$actual_power_nmin, "method" = test10000_0.2$method)
-ggplot(df10000_0.2, aes(x = power_nmin, fill = method, colour = method)) + 
-  geom_histogram(alpha = 0.3, position = "identity")
+### for r=2
+test1000_r2<-simulation(p_C,p_E,n_pilot=1000,niter=10000, r=2)
+mean(test1000_r2$actual_power_nmin)
+hist(test1000_r2$actual_power_nmin)
+
+diff_vec_r2 <- c()
+for(i in seq_along(1:10000)){
+  diff_vec_r2[i]<-max(test1000_r2$n_needed[i,]) - min(test1000_r2$n_needed[i,])
+}
+median(diff_vec_r2)
+
+### for r=4
+test1000_r4<-simulation(p_C,p_E,n_pilot=1000,niter=10000, r=4)
+mean(test1000_r4$actual_power_nmin)
+hist(test1000_r4$actual_power_nmin)
+
+diff_vec_r4 <- c()
+for(i in seq_along(1:10000)){
+  diff_vec_r4[i]<-max(test1000_r4$n_needed[i,]) - min(test1000_r4$n_needed[i,])
+}
+median(diff_vec_r4)
+
+### for r=6
+test1000_r6<-simulation(p_C,p_E,n_pilot=1000,niter=10000, r=6)
+mean(test1000_r6$actual_power_nmin)
+hist(test1000_r6$actual_power_nmin)
+
+diff_vec_r6 <- c()
+for(i in seq_along(1:10000)){
+  diff_vec_r6[i]<-max(test1000_r6$n_needed[i,]) - min(test1000_r6$n_needed[i,])
+}
+median(diff_vec_r6)
 
 
 ###### Multiple Simulations in one plot #########
@@ -1053,8 +1091,9 @@ settings <- function(n_vector, p_C, p_E, r, niter){
 
 sim_small_test <- settings(n_vector = c(seq(150,1000,50), seq(1500, 12000, 500)),
                            p_C, p_E, r, niter=10000)
-ggplot(sim_small_test[[1]], aes(x=n_pilot, y=nmin_power)) +
+plot_scatter_many_iter <- ggplot(sim_small_test[[1]], aes(x=n_pilot, y=nmin_power)) +
   geom_point()+
+  geom_line(alpha=0.4)+
   geom_hline(yintercept=0.8, color = "red", linetype = "dotted")+
   xlab("Pilot Study Sample Size")+
   ylab("Mean Actual Power")+
@@ -1073,12 +1112,16 @@ ggplot(sim_small_test[[2]], aes(x=n_pilot, y=min_n_power, color = method)) +
 
 
 sim_test <- settings(n_vector = c(seq(150,1000,50), seq(1500, 12000, 500)), p_C, p_E, r, niter = 1000)
-ggplot(sim_test[[1]], aes(x=n_pilot, y=nmin_power)) +
+plot_scatter_small_iter <- ggplot(sim_test[[1]], aes(x=n_pilot, y=nmin_power)) +
   geom_point()+
+  geom_line(alpha=0.4)+
   geom_hline(yintercept=0.8, color = "red", linetype = "dotted")+
   xlab("Pilot Study Sample Size")+
   ylab("Mean Actual Power")+
   theme_bw()
+### scatter plots with different iterations in one
+grid.arrange(plot_scatter_small_iter, plot_scatter_many_iter, ncol=2)
+
 
 # now with more iterations, to get rid of the variation
 sim_test_iter <- settings(n_vector = c(seq(150,1000,50), seq(1500, 12000, 500)), p_C, p_E, r, niter = 10000)

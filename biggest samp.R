@@ -90,7 +90,7 @@ sim_plots_biggest <- function(data, group, plots=0){
     geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
     theme_bw()
   if(plots==0){
-    grid.arrange(plot1, plot2)
+    grid.arrange(plot1, plot2, ncol=2)
   } else if(plots==1){
     return(plot1)
   } else if(plots == 2){
