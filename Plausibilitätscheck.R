@@ -17,7 +17,7 @@ calc_p_E <- function(p_C, theta_A){
   return(p_e_2)
 }
 
-###### Theta: assuming the PO assumption holds ####
+####### Theta: assuming the PO assumption holds - trying around ####
 # Kieser,2020 Example 4.3
 # theta_A = ln(1.8)
 p_c_po <- c(0.10, 0.20, 0.10, 0.15, 0.20, 0.25)
@@ -140,8 +140,7 @@ random_simplex <- function(n) {
 }
 
 
-
-
+####### Actual Function to do the estimation check ######
 theta_comparison <- function(comp_iter, vec_length, r){
   theta_results <- data.frame("theta_A" = c(NA), "est_theta"=c(NA), "diff" = c(NA))
   p_c <- 0
@@ -163,8 +162,8 @@ theta_comparison <- function(comp_iter, vec_length, r){
 t_comp1.2 <- theta_comparison(comp_iter = 10000, vec_length = 6, r=1)
 mean(t_comp1.2$diff) # 0.000516
 median(t_comp1.2$diff) # 0.00033
-plot(t_comp1.2$theta_A, t_comp1.2$diff) 
-plot(t_comp1.2$theta_A, t_comp1.2$theta_A-t_comp1.2$est_theta) 
+plot(t_comp1.2$theta_A, t_comp1.2$diff) # absolute difference
+plot(t_comp1.2$theta_A, t_comp1.2$theta_A-t_comp1.2$est_theta) # difference
 
 
 #for r=0.8
@@ -207,7 +206,7 @@ mean(t_comp6$diff) # 0.00053
 plot(t_comp6$theta_A, t_comp6$diff) 
 
 
-# with new technique
+# with new technique - this is old
 theta_comparison_new <- function(comp_iter, vec_length, r){
   theta_results <- data.frame("theta_A" = c(NA), "est_theta"=c(NA), "diff" = c(NA))
   p_c <- 0

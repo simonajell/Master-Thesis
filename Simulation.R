@@ -6,6 +6,7 @@ library(dplyr)
 library(gridExtra)
 library(tidyverse)
 
+
 p_C2 <- c(0.3,0.2,0.15,0.2, 0.1, 0.05)  # control group outcome probabilities
 p_E2 <- c(0.15,0.3,0.1, 0.2, 0.2, 0.05)  # experimental group outcome probabilities
 p_C <- c(0.2, 0.3, 0.3, 0.2)
@@ -698,6 +699,7 @@ simulation<-function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05,beta=0.2){
        nmin=nmin,actual_power_nmin=actual_power_nmin,
        method = c("WMW", "ttest", "PO")[whichnmin])
 }
+
 
 ############# Simulation Application ###########################################
 # Small demo in an example setting.

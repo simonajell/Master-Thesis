@@ -244,12 +244,17 @@ vary_p_theta <- function(n_pilot = 1000, niter = 10000, r = 1, cat = 6, theta_ve
 }
 
 sim_p_theta_100 <- vary_p_theta(n_pilot = 100) 
-sim_p_theta_1000 <- vary_p_theta(n_pilot = 1000, theta_vec = log(seq(0.1, 3.5, 0.3)))
-sim_p_theta_10000 <- vary_p_theta(n_pilot = 10000)
-
 sim_plots(sim_p_theta_100, paste0("log(",seq(0.1, 2.5, 0.4), ")", " = ", round(log(seq(0.1, 2.5, 0.4)), 2)))
-sim_plots(sim_p_theta_1000, paste0("log(",seq(0.1, 3.5, 0.3), ")", " = ", round(log(seq(0.1, 3.5, 0.3)), 2)))
+
+sim_p_theta_1000 <- vary_p_theta(n_pilot = 1000, theta_vec = log(c(seq(0.1, 1.6, 0.3), 2, 3, 4)))
+sim_plots(sim_p_theta_1000, c(seq(0.1, 1.6, 0.3), 2, 3, 4))
+sim_ss_plots(sim_p_theta_1000, c(seq(0.1, 1.6, 0.3), 2, 3, 4), "Odds Ratio")
+
+
+sim_p_theta_10000 <- vary_p_theta(n_pilot = 10000)
 sim_plots(sim_p_theta_10000, paste0("log(",seq(0.1, 2.5, 0.4), ")", " = ", round(log(seq(0.1, 2.5, 0.4)), 2)))
+
+
 
 
 # make this with more odds ratio values, to make a nice scatter plot
@@ -458,7 +463,7 @@ sim_plots(sim_cat2, c(3:15))
 
 #### try it with fixed effect size for p_E
 vary_prob_length_PO <- function(n_pilot = 1000, niter = 10000, r = 1, seed = 1, theta=log(1.8)){
-  vec_length<- c(3:15)
+  vec_length<- c(3:14)
   results <- vector(mode = "list", length = length(vec_length))
   for (i in seq_along(vec_length)) {
     set.seed(seed)
@@ -471,18 +476,22 @@ vary_prob_length_PO <- function(n_pilot = 1000, niter = 10000, r = 1, seed = 1, 
 }
 
 sim_cat_PO <- vary_prob_length_PO(n_pilot = 1000)
-sim_cat_PO[[13]] <- NULL
-sim_plots(sim_cat_PO, c(3:15))
+sim_plots(sim_cat_PO, c(3:14))
 
 sim_cat_PO2 <- vary_prob_length_PO(n_pilot = 1000, theta = log(1.3))
-sim_plots(sim_cat_PO2, c(3:15))
+sim_plots(sim_cat_PO2, c(3:14))
 
 sim_cat_PO3 <- vary_prob_length_PO(n_pilot = 100, theta = log(1.8))
-sim_plots(sim_cat_PO3, c(3:15))
+sim_plots(sim_cat_PO3, c(3:14))
 
 # same odds ratio as p_C and p_E
 sim_cat_PO_same <- vary_prob_length_PO(n_pilot = 1000, theta = log(0.4821251))
-sim_plots(sim_cat_PO_same, c(3:15))
+sim_plots(sim_cat_PO_same, c(3:14))
+
+
+# same odds ratio as p_C and p_E but with n_pilot=200
+sim_cat_PO_same_small <- vary_prob_length_PO(n_pilot = 200, theta = log(0.4821251))
+sim_plots(sim_cat_PO_same_small, c(3:14))
 
 ### make a scatter plot
 # make a scatter plot with the mean actual Power
@@ -491,16 +500,30 @@ for(i in seq(1:length(sim_cat_PO_same))){
   mean_min_power_cat[i] <- mean(sim_cat_PO_same[[i]]$actual_power_nmin)
 }
 
-sim_cat_df <- data.frame("p"=c(3:15), "nmin_power"=mean_min_power_cat)
+sim_cat_df <- data.frame("p"=c(3:14), "nmin_power"=mean_min_power_cat)
 ggplot(sim_cat_df, aes(x=p, y=nmin_power)) +
   geom_point()+
   geom_hline(yintercept=0.8, color = "red", linetype = "dotted")+
   xlab("Number of Categories")+
   ylab("Mean Actual Power")+
+  scale_x_continuous(breaks = seq(3, 15, 2))+
+  scale_y_continuous(breaks = c(0.785, 0.79, 0.795, 0.8))+
   theme_bw()
 
 ## visualise the mean minimum sample size
-sim_ss_plots(sim_cat_PO_same, c(3:15), xlabel = "Number of Categories")
+sim_ss_plots(sim_cat_PO_same, c(3:14), xlabel = "Number of Categories")
+
+# difference between min and max sample size
+diff_vec_cat <- list(c())
+for (j in seq_along(1:length(sim_cat_PO_same))) {
+  vec <- c()
+  for(i in seq_along(1:10000)){
+    vec[i]<-max(sim_cat_PO_same[[j]]$n_needed[i,]) - min(sim_cat_PO_same[[j]]$n_needed[i,])
+  } 
+  diff_vec_cat[[j]] <- vec
+}
+mean(diff_vec_cat[[12]])
+
 
 #### try it with ad-hoc method
 vary_prob_length_ad_hoc <- function(n_pilot = 1000, niter = 10000, r = 1, seed = 1){
