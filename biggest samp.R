@@ -29,35 +29,6 @@ simulation_biggest<-function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05,beta
        method = c("WMW", "ttest", "PO")[whichnmax])
 }
 
-
-
-### 
-max1000<-simulation_biggest(p_C, p_E, n_pilot=1000, niter=10000)
-mean(max1000$actual_power_nmax)
-sd(max1000$actual_power_nmax)
-hist(max1000$actual_power_nmax)
-
-df_max1000 <- data.frame()
-df_max1000 <- data.frame("power_nmax" = max1000$actual_power_nmax, 
-                          "method" = max1000$method) %>%
-  mutate(mean = mean(power_nmax))
-df_max1000$method <- as.factor(df_max1000$method)
-df_max1000$method <- relevel(df_max1000$method, "ttest")
-
-
-grid.arrange(ggplot(df_max1000, aes(x = power_nmax))+ 
-               geom_histogram(fill = "grey", color = "black", position = "identity")+
-               geom_vline(aes(xintercept = mean), color = "red")+
-               geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
-               theme_bw(),
-             ggplot(df_max1000, aes(x = power_nmax, fill = method, colour = method))+ 
-               geom_histogram(alpha = 0.3, position = "identity")+
-               geom_vline(aes(xintercept = mean), color = "red")+
-               scale_colour_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
-               scale_fill_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
-               geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
-               theme_bw())
-
 sim_plots_biggest <- function(data, group, plots=0){
   df_data <- data.frame()
   for (i in seq_along(1:length(data))) {
@@ -98,6 +69,35 @@ sim_plots_biggest <- function(data, group, plots=0){
   }
 }
 
+### 
+max1000<-simulation_biggest(p_C, p_E, n_pilot=1000, niter=10000)
+mean(max1000$actual_power_nmax)
+sd(max1000$actual_power_nmax)
+hist(max1000$actual_power_nmax)
+
+df_max1000 <- data.frame()
+df_max1000 <- data.frame("power_nmax" = max1000$actual_power_nmax, 
+                          "method" = max1000$method) %>%
+  mutate(mean = mean(power_nmax))
+df_max1000$method <- as.factor(df_max1000$method)
+df_max1000$method <- relevel(df_max1000$method, "ttest")
+
+
+grid.arrange(ggplot(df_max1000, aes(x = power_nmax))+ 
+               geom_histogram(fill = "grey", color = "black", position = "identity")+
+               geom_vline(aes(xintercept = mean), color = "red")+
+               geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+               theme_bw(),
+             ggplot(df_max1000, aes(x = power_nmax, fill = method, colour = method))+ 
+               geom_histogram(alpha = 0.3, position = "identity")+
+               geom_vline(aes(xintercept = mean), color = "red")+
+               scale_colour_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
+               scale_fill_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
+               geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+               theme_bw())
+
+
+
 ### vary n_pilot for biggest sample size
 vary_npilot_biggest <- function(p_C, p_E, niter = 10000, r = 1, npilot_vec=c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000)){
   results <- vector(mode = "list", length = length(npilot_vec))
@@ -134,3 +134,32 @@ ggplot(sim_npilot_min_max) +
   xlab("Pilot Study Sample Size")+
   ylab("Mean Actual Power")+
   theme_bw()
+
+# vary r
+max1000_r0.3<-simulation_biggest(p_C, p_E, n_pilot=1000, niter=10000, r=0.3)
+mean(max1000_r0.3$actual_power_nmax)
+sd(max1000_r0.3$actual_power_nmax)
+hist(max1000_r0.3$actual_power_nmax)
+
+df_max1000_r0.3 <- data.frame()
+df_max1000_r0.3 <- data.frame("power_nmax" = max1000_r0.3$actual_power_nmax, 
+                         "method" = max1000_r0.3$method) %>%
+  mutate(mean = mean(power_nmax))
+df_max1000_r0.3$method <- as.factor(df_max1000_r0.3$method)
+df_max1000_r0.3$method <- relevel(df_max1000_r0.3$method, "ttest")
+
+
+grid.arrange(ggplot(df_max1000_r0.3, aes(x = power_nmax))+ 
+               geom_histogram(fill = "grey", color = "black", position = "identity")+
+               geom_vline(aes(xintercept = mean), color = "red")+
+               geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+               theme_bw(),
+             ggplot(df_max1000_r0.3, aes(x = power_nmax, fill = method, colour = method))+ 
+               geom_histogram(alpha = 0.3, position = "identity")+
+               geom_vline(aes(xintercept = mean), color = "red")+
+               scale_colour_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
+               scale_fill_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
+               geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+               theme_bw())
+
+

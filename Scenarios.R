@@ -157,7 +157,7 @@ nrow(test_small_effect$effect[which(test_small_effect$actual_power_nmin == 1),])
 
 
 
-### leave out study when calculated sample size is very large
+### leave out pilot study when calculated sample size is very large
 simulation_big_samp<-function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05,beta=0.2, max_samp = 1000){
   n_needed<-matrix(NA,niter,4)
   colnames(n_needed)<-c("AfS","ttestord", "po", "index")
@@ -171,7 +171,7 @@ simulation_big_samp<-function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05,bet
     result_AfS<-samplesize_AfS(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
     result_ttestord<-samplesize_ttestord(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
     result_po <- samplesize_po_NN(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
-    if(any(c(result_AfS$n_total, result_ttestord$n_total, result_po$n_total)>max_samp)){    print ("sample size too big") ; next }
+    if(min(c(result_AfS$n_total, result_ttestord$n_total, result_po$n_total))>max_samp){    print ("sample size too big") ; next }
     n_needed[i,1]<- result_AfS$n_total
     n_needed[i,2]<- result_ttestord$n_total
     n_needed[i,3]<- result_po$n_total
@@ -192,14 +192,13 @@ simulation_big_samp<-function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05,bet
        method = c("AfS", "ttest", "PO")[whichnmin])
 }
 
-test_big_samp <- simulation_big_samp(p_C, p_E, r=1, niter = 10000, n_pilot = 100, max_samp = 1500)
+test_big_samp <- simulation_big_samp(p_C, p_E, r=1, niter = 10000, n_pilot = 100, max_samp = 1000)
 hist(test_big_samp$actual_power_nmin)
-hist(npilot_50$actual_power_nmin)
 hist(npilot_100$actual_power_nmin)
 length(which(test_big_samp$actual_power_nmin > 0.9))
 length(which(npilot_100$actual_power_nmin > 0.9))
 # mean sample size of sample sizes with power close to 1
-mean(test_big_samp$n_needed[which(test_big_samp$actual_power_nmin > 0.99999),1])
+mean(test_big_samp$n_needed[which(test_big_samp$actual_power_nmin < 0.4),1])
 
 # only leaving out the incredibly big ones
 test_very_big_samp <- simulation_big_samp(p_C, p_E, r=1, niter = 10000, n_pilot = 100, max_samp = 100000)
@@ -221,6 +220,128 @@ sim_plots(sim_ss_exclusion, c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000,
 sim_plots(sim_npilot, c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000, 20000))
 # way less power = 1 if sample sizes bigger than 1500 are excluded
 
+
+### leave out pilot study when calculated sample size is too small (to try and get rid of underpowering)
+simulation_small_samp<-function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05,beta=0.2, min_samp = 100){
+  n_needed<-matrix(NA,niter,4)
+  colnames(n_needed)<-c("AfS","ttestord", "po", "index")
+  actual_power2<-matrix(NA,niter,4)
+  colnames(actual_power2)<-c("AfS","ttestord", "po", "index")
+  for (i in 1:niter){
+    set.seed(i)
+    print(i)
+    phat<-generate.pEpC.estimate(p_C=p_C, p_E=p_E, r=r, n_pilot=n_pilot)
+    # calc. sample sizes
+    result_AfS<-samplesize_AfS(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
+    result_ttestord<-samplesize_ttestord(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
+    result_po <- samplesize_po_NN(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
+    if(min(c(result_AfS$n_total, result_ttestord$n_total, result_po$n_total))<min_samp){    print ("sample size too small") ; next }
+    n_needed[i,1]<- result_AfS$n_total
+    n_needed[i,2]<- result_ttestord$n_total
+    n_needed[i,3]<- result_po$n_total
+    n_needed[i,4]<- i
+    actual_power2[i,1]<-result_AfS$actual_power2
+    actual_power2[i,2]<-result_ttestord$actual_power2
+    actual_power2[i,3]<-result_po$actual_power2
+    actual_power2[i,4]<-i
+  }
+  n_needed <- as.data.frame(na.omit(n_needed))
+  actual_power2 <- as.data.frame(na.omit(actual_power2))
+  actual_power2 <- actual_power2[n_needed$index,]
+  nmin<-apply(n_needed,FUN=min,MARGIN=1)
+  whichnmin<-apply(n_needed[,c(1,2,3)],FUN=which.min,MARGIN=1)
+  actual_power_nmin<-actual_power2[cbind(1:length(whichnmin),whichnmin)]
+  list(n_needed=n_needed,actual_power = actual_power2, 
+       nmin=nmin,actual_power_nmin=actual_power_nmin,
+       method = c("AfS", "ttest", "PO")[whichnmin])
+}
+test_small_samp <- simulation_small_samp(p_C, p_E, r=1, niter = 10000, n_pilot = 100, min_samp = 100)
+hist(test_big_samp$actual_power_nmin)
+hist(npilot_100$actual_power_nmin)
+
+### leave out pilot study when calculated sample size is too small or too big 
+### to try and get rid of under and overpowering
+simulation_wrong_samp<-function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05,beta=0.2, min_samp = 100, max_samp=1000){
+  n_needed<-matrix(NA,niter,4)
+  colnames(n_needed)<-c("AfS","ttestord", "po", "index")
+  actual_power2<-matrix(NA,niter,4)
+  colnames(actual_power2)<-c("AfS","ttestord", "po", "index")
+  for (i in 1:niter){
+    set.seed(i)
+    print(i)
+    phat<-generate.pEpC.estimate(p_C=p_C, p_E=p_E, r=r, n_pilot=n_pilot)
+    # calc. sample sizes
+    result_AfS<-samplesize_AfS(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
+    result_ttestord<-samplesize_ttestord(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
+    result_po <- samplesize_po_NN(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
+    n_min_samp <- min(c(result_AfS$n_total, result_ttestord$n_total, result_po$n_total))
+    if((n_min_samp<min_samp) | (n_min_samp>max_samp)){    print ("sample size not in range") ; next }
+    n_needed[i,1]<- result_AfS$n_total
+    n_needed[i,2]<- result_ttestord$n_total
+    n_needed[i,3]<- result_po$n_total
+    n_needed[i,4]<- i
+    actual_power2[i,1]<-result_AfS$actual_power2
+    actual_power2[i,2]<-result_ttestord$actual_power2
+    actual_power2[i,3]<-result_po$actual_power2
+    actual_power2[i,4]<-i
+  }
+  n_needed <- as.data.frame(na.omit(n_needed))
+  actual_power2 <- as.data.frame(na.omit(actual_power2))
+  actual_power2 <- actual_power2[n_needed$index,]
+  nmin<-apply(n_needed,FUN=min,MARGIN=1)
+  whichnmin<-apply(n_needed[,c(1,2,3)],FUN=which.min,MARGIN=1)
+  actual_power_nmin<-actual_power2[cbind(1:length(whichnmin),whichnmin)]
+  list(n_needed=n_needed,actual_power = actual_power2, 
+       nmin=nmin,actual_power_nmin=actual_power_nmin,
+       method = c("AfS", "ttest", "PO")[whichnmin])
+}
+test_wrong_samp <- simulation_wrong_samp(p_C, p_E, r=1, niter = 10000, n_pilot = 100, min_samp = 100, max_samp=1000)
+mean(test_wrong_samp$actual_power_nmin, na.rm = TRUE)
+length(test_wrong_samp$actual_power_nmin)
+
+df_samp_cut <-  data.frame("power"=test_wrong_samp$actual_power_nmin)%>% 
+  mutate(mean = mean(power, na.rm = TRUE))
+df_eff_no_cut <-  data.frame("power_no_cut"=test100$actual_power_nmin)%>% 
+  mutate(mean = mean(power_no_cut))
+ggplot(df_samp_cut, aes(x = power)) + 
+  geom_histogram(data=df_eff_no_cut, mapping=aes(x=power_no_cut),alpha=0.15, fill = "red", color = "darkgrey",position = "identity") +
+  geom_histogram(fill = "grey", color = "black",position = "identity") +
+  geom_vline(aes(xintercept = mean), color = "red")+
+  geom_vline(data=df_eff_no_cut, aes(xintercept = mean), color = "red", alpha=0.5)+
+  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+  xlab("Actual Power")+
+  ylab("Count")+
+  theme_bw()
+
+test_wrong_samp_strict <- simulation_wrong_samp(p_C, p_E, r=1, niter = 10000, n_pilot = 100, min_samp = 150, max_samp=750)
+mean(test_wrong_samp_strict$actual_power_nmin, na.rm = TRUE)
+hist(test_wrong_samp_strict$actual_power_nmin)
+df_samp_cut_strict <-  data.frame("power"=test_wrong_samp_strict$actual_power_nmin)%>% 
+  mutate(mean = mean(power, na.rm = TRUE))
+ggplot(df_samp_cut_strict, aes(x = power)) + 
+  geom_histogram(data=df_eff_no_cut, mapping=aes(x=power_no_cut),alpha=0.15, fill = "red", color = "darkgrey",position = "identity") +
+  geom_histogram(fill = "grey", color = "black",position = "identity") +
+  geom_vline(aes(xintercept = mean), color = "red")+
+  geom_vline(data=df_eff_no_cut, aes(xintercept = mean), color = "red", alpha=0.5)+
+  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+  xlab("Actual Power")+
+  ylab("Count")+
+  theme_bw()
+
+test_wrong_samp_mild <- simulation_wrong_samp(p_C, p_E, r=1, niter = 10000, n_pilot = 100, min_samp = 50, max_samp=1500)
+mean(test_wrong_samp_mild$actual_power_nmin, na.rm = TRUE)
+hist(test_wrong_samp_mild$actual_power_nmin)
+df_samp_cut_mild <-  data.frame("power"=test_wrong_samp_mild$actual_power_nmin)%>% 
+  mutate(mean = mean(power, na.rm = TRUE))
+ggplot(df_samp_cut_mild, aes(x = power)) + 
+  geom_histogram(data=df_eff_no_cut, mapping=aes(x=power_no_cut),alpha=0.15, fill = "red", color = "darkgrey",position = "identity") +
+  geom_histogram(fill = "grey", color = "black",position = "identity") +
+  geom_vline(aes(xintercept = mean), color = "red")+
+  geom_vline(data=df_eff_no_cut, aes(xintercept = mean), color = "red", alpha=0.5)+
+  geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+  xlab("Actual Power")+
+  ylab("Count")+
+  theme_bw()
 
 ### try to exclude the iterations, in which phat is very far off from p_C
 

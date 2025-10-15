@@ -4,11 +4,8 @@ library(ggplot2)
 library(tidyr)
 library(dplyr)
 library(gridExtra)
-library(tidyverse)
+library(xtable)
 
-
-p_C2 <- c(0.3,0.2,0.15,0.2, 0.1, 0.05)  # control group outcome probabilities
-p_E2 <- c(0.15,0.3,0.1, 0.2, 0.2, 0.05)  # experimental group outcome probabilities
 p_C <- c(0.2, 0.3, 0.3, 0.2)
 p_E <- c(0.1, 0.2, 0.4, 0.3)
 
@@ -653,8 +650,8 @@ ggplot(r_vec, aes(x=r, y=n, color=group))+
   geom_line( )+
   geom_point( )+
   scale_color_manual(values = c("n_C" = "#669933", "n_E" = "#336699")) +
-  xlab("Sample Size")+
-  ylab("Allocation Ratio")+
+  ylab("Sample Size")+
+  xlab("Allocation Ratio")+
   theme_bw()
 
 
@@ -699,7 +696,27 @@ simulation<-function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05,beta=0.2){
        nmin=nmin,actual_power_nmin=actual_power_nmin,
        method = c("WMW", "ttest", "PO")[whichnmin])
 }
-
+simulation_simple<-function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05,beta=0.2){
+  n_needed<-matrix(NA,niter,3)
+  colnames(n_needed)<-c("WMW","ttestord", "po")
+  actual_power2<-matrix(NA,niter,3)
+  colnames(actual_power2)<-c("WMW","ttestord", "po")
+  for (i in 1:niter){
+    set.seed(i)
+    print(i)
+    phat<-generate.pEpC.estimate(p_C=p_C, p_E=p_E, r=r, n_pilot=n_pilot)
+    result_WMW<-samplesize_AfS(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
+    result_ttestord<-samplesize_ttestord(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
+    result_po <- samplesize_po_NN(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E) # newly added
+    n_needed[i,1]<- result_WMW$n_total
+    n_needed[i,2]<- result_ttestord$n_total
+    n_needed[i,3]<- result_po$n_total
+    actual_power2[i,1]<-result_WMW$actual_power2
+    actual_power2[i,2]<-result_ttestord$actual_power2
+    actual_power2[i,3]<-result_po$actual_power2
+  }
+  list(n_needed=n_needed,actual_power = actual_power2)
+}
 
 ############# Simulation Application ###########################################
 # Small demo in an example setting.
@@ -720,18 +737,9 @@ rbind(samplesize_AfS(p_C, p_E, alpha=0.05, beta=0.2, r),
 
 # perform test simulations for different values of n_pilot and compute how often n calculated by AfS is small than n calculated by ttestord
 test50<-simulation(p_C,p_E,n_pilot=50,niter=10000)
-mean(test50$n_needed[,1]<test50$n_needed[,2]) #how often n calculated by AfS is smaller than n calculated by ttestord
-mean(test50$n_needed[,2]<test50$n_needed[,3])
-mean(test50$n_needed[,1]<test50$n_needed[,3])
-# which Method calculated the minimal sample size overall
-colnames(test50$n_needed)[which(as.matrix(test50$n_needed) == min(test50$n_needed), arr.ind = TRUE)[1,2]]
-
 mean(test50$actual_power_nmin)
 median(test50$actual_power_nmin)
 hist(test50$actual_power_nmin)
-plot(test50$actual_power_nmin, type = 'p', col = factor(test50$method))
-legend("topleft", legend = levels(factor(test50$method)), 
-       pch = 19, col = factor(levels(factor(test50$method))))
 df50 <- data.frame("power_nmin" = test50$actual_power_nmin, "method" = test50$method)
 ggplot(df50, aes(x = power_nmin, fill = method, colour = method)) + 
   geom_histogram(alpha = 0.3, position = "identity")
@@ -745,6 +753,16 @@ for(i in seq_along(1:10000)){
   diff_vec_50[i]<-max(test50$n_needed[i,]) - min(test50$n_needed[i,])
 }
 mean(diff_vec_50[is.finite(diff_vec_50)])
+median(diff_vec_50)
+# min max sample sizes
+min(test50$n_needed)
+max(test50$n_needed[is.finite(diff_vec_50)])
+
+# Percentile
+quantile(test50$nmin, 0.999)
+# How many sample sizes are over one million
+length(which(test50$n_needed>1000000))
+test50$n_needed[which(test50$n_needed>1000000)]
 
 ### n_pilot = 100
 test100<-simulation(p_C,p_E,n_pilot=100,niter=10000)

@@ -83,22 +83,21 @@ sim_plots <- function(data, group, plots=0, same_scale=TRUE){
   }
 }
 
-sim_ss_plots <- function(data, group, xlabel="Varied Component"){
+sim_ss_plots <- function(data, group, xlabel="Varied Component", plots=0){
   df_samp <- data.frame()
   for (i in seq_along(1:length(data))) {
     df <- data.frame("nmin" = data[[i]]$nmin, 
                      "group" = group[i])
     df_samp <- rbind(df_samp,df)
   }
-  
-  grid.arrange(  ggplot(df_samp) +
+  plot1 <- ggplot(df_samp) +
                    geom_pointrange(mapping = aes(x=group,y=nmin),
                                    stat = "summary",
                                    fun = mean, size=0.3)+
                    xlab(xlabel)+
                    ylab("Mean Minimum Sample Size")+
-                   theme_bw(),
-                 ggplot(df_samp) +
+                   theme_bw()
+  plot2 <- ggplot(df_samp) +
                    geom_pointrange(mapping = aes(x=group,y=nmin),
                                    stat = "summary",
                                    fun.min = function(z) {quantile(z,0.25)},
@@ -106,10 +105,49 @@ sim_ss_plots <- function(data, group, xlabel="Varied Component"){
                                    fun = median, size=0.3)+
                    xlab(xlabel)+
                    ylab("Median Minimum Sample Size with Quartiles")+
-                   theme_bw(),
-                 ncol=2
-  )
+                   theme_bw()
+  
+  if(plots==0){
+    grid.arrange(plot1, plot2, ncol=2)
+  } else if(plots==1){
+    return(plot1)
+  } else if(plots == 2){
+    return(plot2)
+  }
+  
 }
+
+# function to calculate median difference of smallest vs biggest sample size for every iteration
+median_diff <- function(data, group, power = TRUE){
+  diff_df <- data.frame( "sim" = c(1:length(data)),
+                         "median sample size diff"=c(1:length(data)),
+                         "mean sample size diff" = c(1:length(data)),
+                         "median actual power diff"=c(1:length(data)),
+                         "mean actual power diff"=c(1:length(data))
+                         )
+  for (i in seq_along(1:length(data))) {
+    diff_vec_samp <- c()
+    for(j in seq_along(1:length(data[[1]]$nmin))){
+     diff_vec_samp[j] <-max(data[[i]]$n_needed[j,]) - min(data[[i]]$n_needed[j,])
+    }
+    diff_vec_power <- c()
+    for(k in seq_along(1:length(data[[1]]$nmin))){
+      diff_vec_power[k] <-max(data[[i]]$actual_power[k,]) - min(data[[i]]$actual_power[k,])
+    }
+    diff_df[i,1] <- group[i]
+    diff_df[i,2] <- median(diff_vec_samp)
+    diff_df[i,3] <- mean(diff_vec_samp[is.finite(diff_vec_samp)])
+    if(power == TRUE){
+      diff_df[i,4] <- median(diff_vec_power, na.rm=TRUE)
+      diff_df[i,5] <- mean(diff_vec_power, na.rm=TRUE)
+    } else if(power == FALSE){
+      diff_df <- diff_df[,-5]
+      diff_df <- diff_df[,-4]
+    }
+  }
+  return(diff_df)
+}
+
 ### different r #####
 vary_r <- function(p_C, p_E, n_pilot = 10000, niter = 10000, r_vec=c(0.1, 0.3, 0.5, 0.7, 0.9, 1)){
   results <- vector(mode = "list", length = length(r_vec))
@@ -125,7 +163,7 @@ sim_r_100 <- vary_r(p_C, p_E, n_pilot = 100, r_vec=c(seq(0.1, 0.9, 0.2), 1, seq(
 sim_plots(sim_r_100, c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)))
 
 sim_r_1000 <- vary_r(p_C, p_E, n_pilot = 1000, r_vec=c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)))
-sim_plots(sim_r_1000, c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)))
+sim_plots(sim_r_1000, c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)), plots=2)
 # mean actual power
 mean_sim_r <- c()
 for (i in seq_along(1:length(sim_r_1000))) {
@@ -138,9 +176,19 @@ mean_sim_r_samp <- c()
 for (i in seq_along(1:length(sim_r_1000))) {
   mean_sim_r_samp[i] <- mean(sim_r_1000[[i]]$nmin)
 }
+# median
+median_sim_r_samp <- c()
+for (i in seq_along(1:length(sim_r_1000))) {
+  median_sim_r_samp[i] <- median(sim_r_1000[[i]]$nmin)
+}
 
 # plot the mean minimum sample size and the median min sample size with quartiles
-sim_ss_plots(data=sim_r_1000, group = c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)), xlabel="Allocation Ratio")
+sim_ss_plots(data=sim_r_1000, group = c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)), 
+             xlabel="Allocation Ratio", plots=2)
+
+# how big is the median difference between smallest and biggest sample size in every iteration
+diff_table_r <- median_diff(sim_r_1000, c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)), power = FALSE)
+xtable(diff_table_r, caption=1)
 
 
 # smallest sd of power values
@@ -150,47 +198,19 @@ for(i in seq(1:length(sim_r_1000))){
 }
 min(sd_min_power_r)
 
-#Proportions:
-## 0.1: PO=79.82%  T-Test=6.59%   WMW=13.59%
-## 0.3: PO=91.67%  T-Test=5.37%   WMW=2.96%
-## 0.5: PO=82.86%  T-Test=16.9%   WMW=0.24%
-## 0.7: PO=66.37%  T-Test=33.63%  WMW=0
-## 0.9: PO=52.34%  T-Test=47.66%  WMW=0
-## 1:   PO=44.99%  T-Test=55.01%  WMW=0
-# proportions of methods
-length(which(sim_r_1000[[6]]$method == "PO"))/100
-length(which(sim_r_1000[[6]]$method == "ttest"))/100
-length(which(sim_r_1000[[6]]$method == "WMW"))/100
-### compare sample sizes
-df_r_samp <- data.frame()
+# Proportions
+prop_r <- data.frame("r"=c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)),
+                     "PO"=c(1:length(sim_r_1000)),
+                     "t-test"=c(1:length(sim_r_1000)),
+                     "WMW"=c(1:length(sim_r_1000)))
 for (i in seq_along(1:length(sim_r_1000))) {
-  df <- data.frame("nmin" = sim_r_1000[[i]]$nmin, 
-                   "method" = sim_r_1000[[i]]$method,
-                   "group" = c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1))[i])
-  df_r_samp <- rbind(df_r_samp,df)
+  prop_r[i,2] <- length(which(sim_r_1000[[i]]$method == "PO"))/100
+  prop_r[i,3] <- length(which(sim_r_1000[[i]]$method == "ttest"))/100
+  prop_r[i,4] <- length(which(sim_r_1000[[i]]$method == "WMW"))/100
 }
-df_r_samp <- df_r_samp %>% group_by(group) %>%  mutate(mean = mean(nmin)) 
-df_r_samp <- df_r_samp[df_r_samp$nmin <= 3000, ]
-df_r_samp$method <- as.factor(df_r_samp$method)
-df_r_samp$method <- relevel(df_r_samp$method, "ttest")
-ggplot(df_r_samp, aes(x = nmin))+ 
-    geom_histogram(fill = "grey", color = "black", position = "identity")+
-    geom_vline(aes(xintercept = mean, group = group), color = "red")+
-    facet_wrap(group ~.) +
-    xlab("Min Sample Size")+
-    ylab("Count")+
-    theme_bw()
-ggplot(df_r_samp, aes(x = nmin, fill = method, colour = method))+ 
-    facet_wrap(group ~.) +
-    geom_histogram(alpha = 0.3, position = "identity")+
-    scale_colour_manual(values = c("PO" = "#7CAE00", "ttest" = "#00008B", "WMW" = "#C77CFF")) +
-    scale_fill_manual(values = c("PO" = "#7CAE00", "ttest" = "#00008B", "WMW" = "#C77CFF")) +
-    geom_vline(aes(xintercept = mean, group = group), color = "red")+
-    xlab("Min Sample Size")+
-    ylab("Count")+
-    labs(colour="Method", fill="Method")+
-    theme_bw()
-min(df_r_samp$mean)
+prop_r
+
+
 
 # look at it for a smaller treatment effect
 p_C_theta <- p_C
@@ -243,6 +263,12 @@ vary_p_theta <- function(n_pilot = 1000, niter = 10000, r = 1, cat = 6, theta_ve
   return(results)
 }
 
+sim_p_theta <- vary_p_theta(n_pilot = 1000, theta_vec = log(seq(0.2, 1.8, 0.2)), cat=4)
+sim_plots(sim_p_theta, seq(0.2, 1.8, 0.2), plots = 2)
+sim_ss_plots(sim_p_theta, seq(0.2, 1.8, 0.2), "Odds Ratio", plots = 2)
+sim_theta_diff <- median_diff(sim_p_theta, seq(0.2, 1.8, 0.2), power=FALSE)
+xtable(sim_theta_diff, caption=1)
+
 sim_p_theta_100 <- vary_p_theta(n_pilot = 100) 
 sim_plots(sim_p_theta_100, paste0("log(",seq(0.1, 2.5, 0.4), ")", " = ", round(log(seq(0.1, 2.5, 0.4)), 2)))
 
@@ -250,6 +276,9 @@ sim_p_theta_1000 <- vary_p_theta(n_pilot = 1000, theta_vec = log(c(seq(0.1, 1.6,
 sim_plots(sim_p_theta_1000, c(seq(0.1, 1.6, 0.3), 2, 3, 4))
 sim_ss_plots(sim_p_theta_1000, c(seq(0.1, 1.6, 0.3), 2, 3, 4), "Odds Ratio")
 
+sim_p_theta_1000 <- vary_p_theta(n_pilot = 1000, theta_vec = log(c(seq(0.1, 1.6, 0.3))))
+sim_plots(sim_p_theta_1000, c(seq(0.1, 1.6, 0.3), 2, 3, 4))
+sim_ss_plots(sim_p_theta_1000, c(seq(0.1, 1.6, 0.3), 2, 3, 4), "Odds Ratio")
 
 sim_p_theta_10000 <- vary_p_theta(n_pilot = 10000)
 sim_plots(sim_p_theta_10000, paste0("log(",seq(0.1, 2.5, 0.4), ")", " = ", round(log(seq(0.1, 2.5, 0.4)), 2)))
@@ -559,7 +588,7 @@ vary_npilot <- function(p_C, p_E, niter = 10000, r = 1){
 sim_npilot <- vary_npilot(p_C, p_E)
 sim_npilot[[10]]<- NULL
 
-sim_plots(sim_npilot, c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000))
+sim_plots(sim_npilot, c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000), plots=2)
   
   
 mean_sim_npilot <- c()
@@ -578,8 +607,11 @@ sd_sim_npilot
 # plot the mean minimum sample size and the median min sample size with quartiles
 sim_ss_plots(data=sim_npilot, 
              group = c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000),
-             xlabel="Pilot Study Sample Size")
+             xlabel="Pilot Study Sample Size", plots=2)
 
+# how big is the median difference between smallest and biggest sample size in every iteration
+diff_table_npilot <- median_diff(sim_npilot, c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000))
+xtable(diff_table_npilot)
 
 ### different iterations #####
 
