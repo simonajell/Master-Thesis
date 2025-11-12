@@ -1,4 +1,4 @@
-## Try to reproduce ologit in R
+
 library(MASS)
 library(ggplot2)
 library(tidyr)
@@ -8,6 +8,30 @@ library(xtable)
 
 p_C <- c(0.2, 0.3, 0.3, 0.2)
 p_E <- c(0.1, 0.2, 0.4, 0.3)
+
+### check if PO assumption fulfilled for the exemplary vectors
+  # example vectors (must sum to 1)
+  p_c <- p_C  # control
+  p_t <- p_E  # treatment
+  # cumulative probabilities
+  Fc <- cumsum(p_c)
+  Ft <- cumsum(p_t)
+  K <- length(p_c)
+  # compute odds and odds ratios for cutpoints 1:(K-1)
+  cutpoints <- 1:(K-1)
+  odds_c <- Fc[cutpoints] / (1 - Fc[cutpoints])
+  odds_t <- Ft[cutpoints] / (1 - Ft[cutpoints])
+  OR <- odds_t / odds_c
+  logOR <- log(OR)
+  data.frame(cut = cutpoints, Fc = Fc[cutpoints], Ft = Ft[cutpoints],
+             odds_c = odds_c, odds_t = odds_t, OR = OR, logOR = logOR)
+  # quick plot
+  plot(cutpoints, logOR, type = "b", pch = 16, xlab = "Cutpoint k",
+       ylab = "log(OR) (treatment vs control)",
+       main = "Check proportional odds: log-OR across cutpoints")
+  abline(h = mean(logOR), col = "gray", lty = 2)
+  
+  # -> not fulfilled
 
 ##### Function that generates a simplex vector ####
 # Zufallsvektoren auf dem Simplex
@@ -1112,7 +1136,6 @@ sim_small_test <- settings(n_vector = c(seq(150,1000,50), seq(1500, 12000, 500))
                            p_C, p_E, r, niter=10000)
 plot_scatter_many_iter <- ggplot(sim_small_test[[1]], aes(x=n_pilot, y=nmin_power)) +
   geom_point()+
-  geom_line(alpha=0.4)+
   geom_hline(yintercept=0.8, color = "red", linetype = "dotted")+
   xlab("Pilot Study Sample Size")+
   ylab("Mean Actual Power")+
@@ -1133,14 +1156,14 @@ ggplot(sim_small_test[[2]], aes(x=n_pilot, y=min_n_power, color = method)) +
 sim_test <- settings(n_vector = c(seq(150,1000,50), seq(1500, 12000, 500)), p_C, p_E, r, niter = 1000)
 plot_scatter_small_iter <- ggplot(sim_test[[1]], aes(x=n_pilot, y=nmin_power)) +
   geom_point()+
-  geom_line(alpha=0.4)+
   geom_hline(yintercept=0.8, color = "red", linetype = "dotted")+
   xlab("Pilot Study Sample Size")+
   ylab("Mean Actual Power")+
   theme_bw()
 ### scatter plots with different iterations in one
 grid.arrange(plot_scatter_small_iter, plot_scatter_many_iter, ncol=2)
-
+plot_scatter_small_iter
+plot_scatter_many_iter
 
 # now with more iterations, to get rid of the variation
 sim_test_iter <- settings(n_vector = c(seq(150,1000,50), seq(1500, 12000, 500)), p_C, p_E, r, niter = 10000)

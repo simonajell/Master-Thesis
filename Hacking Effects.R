@@ -227,7 +227,7 @@ sim_plots(sim_r_1000, c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)), plots=2)
 
 # plot the mean minimum sample size and the median min sample size with quartiles
 sim_ss_plots(data=sim_r_1000, group = c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)), 
-             xlabel="Allocation Ratio", plots=2)
+             xlabel="Allocation Ratio", plots=0)
 
 sum_r <- summary_statistics(sim_r_1000, group = c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)), d_label = "r")
 print(xtable(sum_r, caption=1, digits=4), include.rownames = FALSE)
@@ -239,8 +239,6 @@ sim_scatter_plot(data=sim_r_1000, group = c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)),
 # how big is the median difference between smallest and biggest sample size in every iteration
 diff_table_r <- median_diff(sim_r_1000, c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)), power = FALSE)
 xtable(diff_table_r, caption=1)
-
-
 
 # look at it for a smaller treatment effect
 p_C_theta <- p_C

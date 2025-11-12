@@ -5,7 +5,7 @@ comp_ttest <- function(alpha = 0.05, beta = 0.2, r = 1, iter = 1000){
   for (i in seq_along(1:iter)) {
     set.seed(i)
     prob_length <- sample(c(3:14), 1)
-    theta <- runif(1, min = 1, max = 5)
+    theta <- runif(1, min = 0.1, max = 5)
     print(i)
     p <- generate_two_simplex_vectors(prob_length, log(theta))
     p_C <- p[[1]]
@@ -25,7 +25,7 @@ comp_ttest <- function(alpha = 0.05, beta = 0.2, r = 1, iter = 1000){
 
 
 comp_ttest <- comp_ttest(iter = 10000)
-mean(abs(comp_ttest$ttestord-comp_ttest2$R)) # 0.0050
+mean(abs(comp_ttest$ttestord-comp_ttest2$R)) # 0.004933035
 ggplot(data=comp_ttest, aes(x=ttestord, y=R))+
   geom_point(alpha=0.6)+
   geom_abline(slope=1, color="red")+
@@ -68,7 +68,7 @@ comp_ttest_samp <- function(alpha = 0.05, beta = 0.2, r = 1, iter = 1000, theta)
   for (i in seq_along(1:iter)) {
     set.seed(i)
     prob_length <- sample(c(3:14), 1)
-    theta <-  runif(1, min = 1, max = 5)
+    theta <-  runif(1, min = 0.1, max = 5)
     print(i)
     p <- generate_two_simplex_vectors(prob_length, log(theta))
     p_C <- p[[1]]
@@ -84,7 +84,7 @@ comp_ttest_samp <- function(alpha = 0.05, beta = 0.2, r = 1, iter = 1000, theta)
 }
 
 comp_ttest_samp <- comp_ttest_samp(iter=10000)
-mean(abs(comp_ttest_samp$ttestord-comp_ttest_samp$R)) # 0.0442
+mean(abs(comp_ttest_samp$ttestord-comp_ttest_samp$R)) # 0.0386
 
 ggplot(data=comp_ttest_samp, aes(x=ttestord, y=R))+
   geom_point(alpha=0.6)+
