@@ -1,12 +1,13 @@
 ### Compare ttest function from R with my implementation
-comp_ttest <- function(alpha = 0.05, beta = 0.2, r = 1, iter = 1000, bias = 1.2){
+comp_ttest <- function(alpha = 0.05, beta = 0.2, r = 1, iter = 1000){
   results_R <-  c()
   results_me <-  c()
   for (i in seq_along(1:iter)) {
     set.seed(i)
-    prob_length <- sample(c(3,4,5,6,7,8), 1)
+    prob_length <- sample(c(3:14), 1)
+    theta <- runif(1, min = 1, max = 5)
     print(i)
-    p <- generate_two_simplex_vectors(prob_length, bias)
+    p <- generate_two_simplex_vectors(prob_length, log(theta))
     p_C <- p[[1]]
     p_E <- p[[2]]
     ttest <- samplesize_ttestord(p_C=p_C, p_E=p_E, alpha, beta, r)
@@ -19,22 +20,19 @@ comp_ttest <- function(alpha = 0.05, beta = 0.2, r = 1, iter = 1000, bias = 1.2)
  return(data.frame("ttestord"=results_me, "R"=results_R)) 
 }
 
-power.t.test(delta = del_sig$delta_A, power = 0.8, sig.level = 0.05, 
-             sd = del_sig$sigma, alternative = "two.sided", type = "two.sample")
+# power.t.test(delta = del_sig$delta_A, power = 0.8, sig.level = 0.05, 
+#             sd = del_sig$sigma, alternative = "two.sided", type = "two.sample")
 
-comp_ttest1 <- comp_ttest(iter = 1000)
-mean(comp_ttest1$ttestord -comp_ttest1$R)
-ggplot(data=comp_ttest1, aes(x=ttestord, y=R))+
-  geom_point()+
-  geom_abline(slope=1, color="red")
 
-comp_ttest2 <- comp_ttest(iter = 10000)
-mean(comp_ttest2$ttestord-comp_ttest2$R)
-ggplot(data=comp_ttest2, aes(x=ttestord, y=R))+
-  geom_point()+
+comp_ttest <- comp_ttest(iter = 10000)
+mean(abs(comp_ttest$ttestord-comp_ttest2$R)) # 0.0050
+ggplot(data=comp_ttest, aes(x=ttestord, y=R))+
+  geom_point(alpha=0.6)+
   geom_abline(slope=1, color="red")+
+  xlab("t-test")+
+  ylab("base R")+
   theme_bw()
-length(which(comp_ttest2$R < comp_ttest2$ttestord))/10000
+length(which(comp_ttest$R < comp_ttest$ttestord))/10000
 
 
 # with (1+r) in the Denominator
@@ -64,14 +62,15 @@ mean(comp_ttest_k_1$ttestord -comp_ttest_k_1$R)
 
 
 ### Compare Sample Size Calculation
-comp_ttest_samp <- function(alpha = 0.05, beta = 0.2, r = 1, iter = 1000, bias = 1.2){
+comp_ttest_samp <- function(alpha = 0.05, beta = 0.2, r = 1, iter = 1000, theta){
   results_R <-  c()
   results_me <-  c()
   for (i in seq_along(1:iter)) {
     set.seed(i)
-    prob_length <- sample(c(3,4,5,6,7,8), 1)
+    prob_length <- sample(c(3:14), 1)
+    theta <-  runif(1, min = 1, max = 5)
     print(i)
-    p <- generate_two_simplex_vectors(prob_length, bias)
+    p <- generate_two_simplex_vectors(prob_length, log(theta))
     p_C <- p[[1]]
     p_E <- p[[2]]
     ttest <- samplesize_ttestord(p_C=p_C, p_E=p_E, alpha, beta, r)
@@ -85,6 +84,16 @@ comp_ttest_samp <- function(alpha = 0.05, beta = 0.2, r = 1, iter = 1000, bias =
 }
 
 comp_ttest_samp <- comp_ttest_samp(iter=10000)
+mean(abs(comp_ttest_samp$ttestord-comp_ttest_samp$R)) # 0.0442
+
+ggplot(data=comp_ttest_samp, aes(x=ttestord, y=R))+
+  geom_point(alpha=0.6)+
+  geom_abline(slope=1, color="red")+
+  xlab("t-test")+
+  ylab("base R")+
+  ylim(0,100000)+
+  xlim(0,100000)+
+  theme_bw()
 # what percentage of calculations are not equal
 length(which(comp_ttest_samp$ttestord != comp_ttest_samp$R, arr.ind = TRUE))/nrow(comp_ttest_samp)
 # whats the mean difference of the unequal pairs? -> 2

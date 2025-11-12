@@ -162,4 +162,35 @@ grid.arrange(ggplot(df_max1000_r0.3, aes(x = power_nmax))+
                geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
                theme_bw())
 
+# vary theta, especially for theta=1
+p_C_t1 <- uniform_simplex(4)[[1]]
+p_E_t1 <- calc_p_E(p_C_t1, theta_A = log(1))
+set.seed(1)
+noise <- runif(4, min = 0.95, max = 1.05) 
+p_noisy <- p_E_t1 * noise  
+p_E_t1 <- p_noisy/sum(p_noisy)
 
+max1000_theta1 <- simulation_biggest(p_C_t1, p_E_t1, n_pilot=1000, niter=10000, r=1)
+hist(max1000_theta1$actual_power_nmax)
+mean(max1000_theta1$actual_power_nmax, na.rm = TRUE)
+
+df_max1000_theta1 <- data.frame()
+df_max1000_theta1 <- data.frame("power_nmax" = max1000_theta1$actual_power_nmax, 
+                              "method" = max1000_theta1$method) %>%
+  mutate(mean = mean(power_nmax, na.rm = TRUE))
+df_max1000_theta1$method <- as.factor(df_max1000_theta1$method)
+df_max1000_theta1$method <- relevel(df_max1000_theta1$method, "ttest")
+
+
+grid.arrange(ggplot(df_max1000_theta1, aes(x = power_nmax))+ 
+               geom_histogram(fill = "grey", color = "black", position = "identity")+
+               geom_vline(aes(xintercept = mean), color = "red")+
+               geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+               theme_bw(),
+             ggplot(df_max1000_theta1, aes(x = power_nmax, fill = method, colour = method))+ 
+               geom_histogram(alpha = 0.3, position = "identity")+
+               geom_vline(aes(xintercept = mean), color = "red")+
+               scale_colour_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
+               scale_fill_manual(values = c("PO" = "#7CAE00", "ttest" = "#00BFC4", "WMW" = "#C77CFF")) +
+               geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
+               theme_bw())

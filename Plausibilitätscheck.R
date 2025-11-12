@@ -141,13 +141,14 @@ random_simplex <- function(n) {
 
 
 ####### Actual Function to do the estimation check ######
-theta_comparison <- function(comp_iter, vec_length, r){
+theta_comparison <- function(comp_iter, r){
   theta_results <- data.frame("theta_A" = c(NA), "est_theta"=c(NA), "diff" = c(NA))
   p_c <- 0
   p_e <- 0
   for (i in seq_along(1:comp_iter)) {
     set.seed(i)
     print(i)
+    vec_length <- sample(c(3:14), 1)
     theta_random <- runif(1, min = 1, max = 5)
     p_c <- random_simplex(n=vec_length)
     p_e <- calc_p_E(p_C = p_c, theta_A = log(theta_random))
@@ -159,11 +160,17 @@ theta_comparison <- function(comp_iter, vec_length, r){
   return(theta_results)
 }
 
-t_comp1.2 <- theta_comparison(comp_iter = 10000, vec_length = 6, r=1)
-mean(t_comp1.2$diff) # 0.000516
-median(t_comp1.2$diff) # 0.00033
+t_comp1.2 <- theta_comparison(comp_iter = 10000, r=1)
+mean(t_comp1.2$diff) # 0.00053
+median(t_comp1.2$diff) # 0.00031
 plot(t_comp1.2$theta_A, t_comp1.2$diff) # absolute difference
 plot(t_comp1.2$theta_A, t_comp1.2$theta_A-t_comp1.2$est_theta) # difference
+ggplot(data=t_comp1.2, aes(x=theta_A, y=est_theta))+
+  geom_point(alpha=0.6)+
+  geom_abline(slope=1, color="red")+
+  xlab("log odds ratio")+
+  ylab("estimated theta")+
+  theme_bw()
 
 
 #for r=0.8
@@ -252,7 +259,8 @@ var_comparison <- function(comp_iter, vec_length, r){
   var_results <- data.frame("theta_A" = c(NA), "var_w"=c(NA), "var_k" = c(NA), "diff" = c(NA))
   for (i in seq_along(1:comp_iter)) {
     set.seed(i)
-    theta_random <- runif(1, min = 1, max = 3)
+    vec_length <- sample(3:14, 1)
+    theta_random <- runif(1, min = 1, max = 5)
     p_c_po <- random_simplex(vec_length)
     p_e_po <- calc_p_E(p_c_po, theta_A = log(theta_random))
     var_results[i,1] <- theta_random
@@ -271,10 +279,17 @@ var_comparison <- function(comp_iter, vec_length, r){
 }
 
 v_comp1 <- var_comparison(comp_iter = 10000, vec_length = 6, r=1)
-mean(v_comp1$diff) # on average a difference of 0.00067
+mean(v_comp1$diff) # on average a difference of 0.00078
 median(v_comp1$diff) # 0.00031
 plot(v_comp1$theta_A, v_comp1$diff) # difference between variances gets bigger with bigger thetas
 plot(v_comp1$var_w,  abs(v_comp1$var_w - v_comp1$var_k))
+
+ggplot(data=v_comp1, aes(x=var_w, y=var_k))+
+  geom_point(alpha=0.6)+
+  geom_abline(slope=1, color="red")+
+  xlab("V_N")+
+  ylab("V_Kieser")+
+  theme_bw()
 
 # for vec_length = 4
 v_comp2 <- var_comparison(comp_iter = 1000, vec_length = 4, r=1)
@@ -371,7 +386,7 @@ samplesize_po_kieser(p_C_PO, p_E_PO, alpha = 0.05, beta = 0.2, r =1)
 samplesize_po_kieser_known(p_C_PO, p_E_PO, theta = 1.8, alpha = 0.05, beta = 0.2, r =1)
 
 
-comp_PO_fullfilled <- function(alpha=0.05, beta=0.2, r=1, iter=1000, theta_A = 1.8){
+comp_PO_fullfilled <- function(alpha=0.05, beta=0.2, r=1, iter=1000){
   results_NN <-  data.frame()
   results_AA <-  data.frame()
   results_NA <-  data.frame()
@@ -380,7 +395,8 @@ comp_PO_fullfilled <- function(alpha=0.05, beta=0.2, r=1, iter=1000, theta_A = 1
   theta_vec <- c(NA)
   for (i in seq_along(1:iter)) {
     set.seed(i)
-    prob_length <- sample(c(3,4,5,6,7,8), 1)
+    prob_length <- sample(3:14, 1)
+    theta_A <- runif(1, min = 1.05, max = 5)
     print(i)
     p_C <- random_simplex(prob_length)
     p_E <- calc_p_E(p_C, theta_A = log(theta_A))
@@ -398,8 +414,15 @@ comp_PO_fullfilled <- function(alpha=0.05, beta=0.2, r=1, iter=1000, theta_A = 1
 
 Samp_Size_PO_fulfilled <- comp_PO_fullfilled(iter = 10000)
 # how often is NN the same as Kieser
-length(which(Samp_Size_PO_fulfilled[[1]]$n_total == Samp_Size_PO_fulfilled[[2]]$n_total))/10000 # 99.05% , 520 unequal
-mean(Samp_Size_PO_fulfilled[[1]]$n_total - Samp_Size_PO_fulfilled[[2]]$n_total)
+length(which(Samp_Size_PO_fulfilled[[1]]$n_total == Samp_Size_PO_fulfilled[[2]]$n_total))/10000 # 98.51% , 149 unequal
+mean(abs(Samp_Size_PO_fulfilled[[1]]$n_total - Samp_Size_PO_fulfilled[[2]]$n_total))
+
+mean(abs(Samp_Size_PO_fulfilled[[1]]$n_total[which(Samp_Size_PO_fulfilled[[1]]$n_total != Samp_Size_PO_fulfilled[[2]]$n_total, arr.ind = TRUE)] -
+       Samp_Size_PO_fulfilled[[2]]$n_total[which(Samp_Size_PO_fulfilled[[1]]$n_total != Samp_Size_PO_fulfilled[[2]]$n_total, arr.ind = TRUE)]))
+
+length(which(Samp_Size_PO_fulfilled[[1]]$n_total!=Samp_Size_PO_fulfilled[[2]]$n_total, arr.ind = FALSE))
+
+
 # how often is AA the same as Kieser
 length(which(Samp_Size_PO_fulfilled[[2]]$n_total == Samp_Size_PO_fulfilled[[3]]$n_total))/10000 # 0%
 mean(Samp_Size_PO_fulfilled[[3]]$n_total - Samp_Size_PO_fulfilled[[2]]$n_total)

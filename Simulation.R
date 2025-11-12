@@ -38,20 +38,21 @@ normal_simplex_theta <- function(n, favored_cat, theta=log(1.8)) {
   plot(x,y1)
   return(list(y,y1))
 }
+
 # Boulesteix idea fo how to generate the vectors
 # either calculate p_E with random noise form p_C or with a treatment effect theta_A
 normal_vector <- function(cat, niter=10000, theta_A = NA, seed = 1){
   set.seed(seed)
   # sample normally distributed values
-  samp_norm <- rnorm(n = niter, mean = 10, sd = 5)
+  samp_norm <- rnorm(n = niter, mean = 0, sd = 1)
   samp_df <- data.frame(value = samp_norm) 
   # calculate the breaking points to categorize the values
   breaks_norm <- (max(samp_norm)-min(samp_norm))/(cat)
   # cut the values up into categories
   samp_df$category <- cut(samp_df$value, 
-                          breaks=c(seq(min(samp_norm), max(samp_norm), breaks_norm)), 
+                          breaks=c(round(seq(min(samp_norm), max(samp_norm), breaks_norm),6)), 
                           labels=c(1:cat)) 
-  p <- prop.table(table(samp_df$category))
+  p <- as.vector(prop.table(table(samp_df$category)))
   if(is.na(theta_A)){
     noise <- runif(cat, min = 0.15, max = 0.3) # Add random noise
     p_noisy <- p * noise  # Apply noise and normalize
@@ -68,18 +69,16 @@ normal_vector <- function(cat, niter=10000, theta_A = NA, seed = 1){
 }
 
 # Function that generates two simplex vectors, where the second has higher values on average
-generate_two_simplex_vectors <- function(n, bias_strength = 2) {
+generate_two_simplex_vectors <- function(n, theta = log(1.8)) {
   # Vector A: Gamma Distribution
-  alpha_a <- rep(1, n)
-  a <- rgamma(n, shape = alpha_a, rate = 1)
+  a <- rgamma(n, shape = 1, rate = 1)
   a <- a / sum(a)
   
-  # Vektor B: bigger alpha-values where a has high values
-  # this reinforces high values
-  alpha_b <- 1 + bias_strength * a  # bias_strength controls amplification
-  b <- rgamma(n, shape = alpha_b, rate = 1)
-  b <- b / sum(b)
-  
+  # Vector B: calculated with odds ratio and random noise
+  b <- calc_p_E(a, theta_A = theta)
+  noise <- runif(n, min = 0.9, max = 1.1) # Add random noise, so PO assumption isnt fulfilled and PO method doesnt have advantage
+  p_noisy <- b * noise  # Apply noise and normalize
+  b <- p_noisy/sum(p_noisy)
   list(a = a, b = b)
 }
 
@@ -554,7 +553,7 @@ calculate_delta_A_sigma<-function(p_C,p_E){
 samplesize_ttestord<-  function(p_C, p_E, alpha, beta, r, p_C2=NULL, p_E2=NULL){
  
   param<-calculate_delta_A_sigma(p_C,p_E)
-  # could be formula 8.4 from kieser 2020
+  # could be formula 3.11c from kieser 2020
   n_C <- ceiling((1+r)/r * (qnorm(1-alpha/2) + qnorm(1-beta))^2 *
                    (param$sigma/param$delta_A)^2 + (qnorm(1-alpha/2)^2) / (2*(1+r)))
   n_E <- ceiling((1+r) * (qnorm(1-alpha/2) + qnorm(1-beta))^2 *
