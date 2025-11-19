@@ -156,9 +156,9 @@ summary_statistics <- function(data, group, d_label="Varied Component"){
   }
   # calculate the proportion of methods
   for (i in seq_along(1:length(data))) {
-    result[i,4] <- length(which(data[[i]]$method=="ttest"))/100
-    result[i,5] <- length(which(data[[i]]$method=="PO"))/100
-    result[i,6] <- length(which(data[[i]]$method=="WMW"))/100
+    result[i,4] <- length(which(data[[i]]$method=="ttest"))/(length(data[[i]]$nmin)*0.01)
+    result[i,5] <- length(which(data[[i]]$method=="PO"))/(length(data[[i]]$nmin)*0.01)
+    result[i,6] <- length(which(data[[i]]$method=="WMW"))/(length(data[[i]]$nmin)*0.01)
   }
   # calculate mean minimum sample size
   for (i in seq_along(1:length(data))) {
@@ -224,11 +224,11 @@ sim_r_1000 <- vary_r(p_C, p_E, n_pilot = 1000, r_vec=c(seq(0.1, 0.9, 0.2), 1, se
 sim_plots(sim_r_1000, c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)), plots=2)
 
 
-
 # plot the mean minimum sample size and the median min sample size with quartiles
 sim_ss_plots(data=sim_r_1000, group = c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)), 
              xlabel="Allocation Ratio", plots=0)
 
+# summary
 sum_r <- summary_statistics(sim_r_1000, group = c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)), d_label = "r")
 print(xtable(sum_r, caption=1, digits=4), include.rownames = FALSE)
 
@@ -674,32 +674,12 @@ vary_niter <- function(p_C, p_E, n_pilot = 1000, r = 1){
   }
   return(results)
 }
-
 sim_niter <- vary_niter(p_C, p_E, n_pilot = 1000)
 sim_plots(sim_niter, c(100, 500, 1000, 2500, 5000, 7500, 10000, 15000, 20000), same_scale = FALSE)
 
-# mean and sd 
-m <- c()
-for(i in seq(1:length(sim_niter))){
-  m[i] <- mean(sim_niter[[i]]$actual_power_nmin)
-}
-mean(m)
-
-for(i in seq(1:length(sim_niter))){
-  sd_i <- sd(sim_niter[[i]]$actual_power_nmin)
-  print(sd_i)
-}
-mean(sd_i)
-
-# proportions of the methods
-prop <- data.frame("PO"=c(), "ttest"=c(), "WMW"=c())
-for (i in seq(1:length(sim_niter))) {
-  prop[i,1] <- length(which(sim_niter[[i]]$method == "PO"))/c(100, 500, 1000, 2500, 5000, 7500, 10000, 15000)[i]
-  prop[i,2] <- length(which(sim_niter[[i]]$method == "ttest"))/c(100, 500, 1000, 2500, 5000, 7500, 10000, 15000)[i]
-  prop[i,3] <- length(which(sim_niter[[i]]$method == "WMW"))/c(100, 500, 1000, 2500, 5000, 7500, 10000, 15000)[i]
-}
-prop
-
+# Summary statistics
+sum_iter <- summary_statistics(sim_niter, group = c(100, 500, 1000, 2500, 5000, 7500, 10000, 15000, 20000), d_label = "iterations")
+print(xtable(sum_iter, caption=1, digits=4), include.rownames = FALSE)
 
 
 ### vary alpha ########

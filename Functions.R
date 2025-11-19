@@ -6,7 +6,9 @@ library(dplyr)
 library(gridExtra)
 library(xtable)
 
-
+#### Basis values ####
+p_C <- c(0.2, 0.3, 0.3, 0.2)
+p_E <- c(0.1, 0.2, 0.4, 0.3)
 #### Functions used for the t-test method ####
   # Function to calculate delta_A and sigma 
   calculate_delta_A_sigma<-function(p_C,p_E){
