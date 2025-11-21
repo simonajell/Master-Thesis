@@ -375,7 +375,7 @@ p_E <- c(0.1, 0.2, 0.4, 0.3)
          method = c("WMW", "ttest", "PO")[whichnmin])
   }
   
-#### Visualisation and Summary Functions ####
+#### Visualization and Summary Functions ####
   # Function to plot histograms for multiple simulations (also separated by methods)
     # "data": should be a list of simulations from the "simulation" function
   sim_plots <- function(data, group, plots=0, same_scale=TRUE){
@@ -608,10 +608,14 @@ p_E <- c(0.1, 0.2, 0.4, 0.3)
 #### Function to calculate p_E with a treatment effect #####
   # Function to calculate p_E when p_C and theta_A are known
   calc_p_E <- function(p_C, theta_A){
+  
+    # Use Formula 8 in Section 2.5 to calculate the cumulative experimental probability vector
     p_e_1 <- rep(0, length(p_C))
     for (i in seq_along(1:length(p_C))) {
       p_e_1[i] <- sum(p_C[1:i])/(sum(p_C[1:i])+((1-sum(p_C[1:i]))*exp(-theta_A)))
     }
+    
+    # Subtract the elements of the vector
     p_e_2 <- rep(0, length(p_C))
     for (i in (2:length(p_C))) {
       p_e_2[1]<- p_e_1[1]
@@ -621,9 +625,14 @@ p_E <- c(0.1, 0.2, 0.4, 0.3)
   }
 #### Function that generates a simplex vector with a uniform distribution ####
   uniform_simplex <- function(n) {
+    # Create the uniform vector
     uni <- rep(1/n, n)
-    noise <- runif(n, min = 0.7, max = 0.9) # Add random noise (for example, 10% variation)
-    uni_noisy <- uni * noise  # Apply noise and normalize
+    
+    # Add random noise
+    noise <- runif(n, min = 0.7, max = 0.9) 
+    
+    # Apply noise and normalize
+    uni_noisy <- uni * noise  
     uni_noisy <- uni_noisy/sum(uni_noisy)
     return(list(uni, uni_noisy))
   }  
