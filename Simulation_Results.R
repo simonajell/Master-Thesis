@@ -4,7 +4,7 @@
 
 #### 4.8 Determining the Number of Iterations ####
 # Function to vary the number of iterations
-  vary_niter <- function(p_C, p_E, n_pilot = 1000, r = 1, iter_vec = c(100, 500, 1000, 2500, 5000, 7500, 10000, 15000, 20000)){
+  vary_niter <- function(p_C, p_E, n_pilot = 1000, r = 1, niter_vec = c(100, 500, 1000, 2500, 5000, 7500, 10000, 15000, 20000)){
     results <- vector(mode = "list", length = length(niter_vec))
     for (i in seq_along(niter_vec)) {
       sim <- simulation(p_C, p_E, r = r, n_pilot = n_pilot, niter = niter_vec[i])
@@ -35,13 +35,13 @@
   }
   
 # Scatter plot with small number of iterations  
-  sim_iter_small <- vary_npilot(p_C, p_E, r, niter = 1000,  npilot_vec = c(seq(150,1000,50), seq(1500, 12000, 500)))
+  sim_iter_small <- vary_npilot(p_C, p_E, r=1, niter = 1000,  npilot_vec = c(seq(150,1000,50), seq(1500, 12000, 500)))
   sim_scatter_plot(data=sim_iter_small, group = c(seq(150,1000,50), seq(1500, 12000, 500)), 
                    xlabel="Pilot Study Sample Size")
   
   
 # Scatter plot with small number of iterations
-  sim_iter_large <- vary_npilot(p_C, p_E, r, niter = 10000,  npilot_vec = c(seq(150,1000,50), seq(1500, 12000, 500)))
+  sim_iter_large <- vary_npilot(p_C, p_E, r=1, niter = 10000,  npilot_vec = c(seq(150,1000,50), seq(1500, 12000, 500)))
   sim_scatter_plot(data=sim_iter_large, group = c(seq(150,1000,50), seq(1500, 12000, 500)), 
                    xlabel="Pilot Study Sample Size")
   
@@ -77,9 +77,9 @@
   ### leave out study when effect is very small
   simulation_diff_effect<-function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05,beta=0.2, effect_cut){
     n_needed<-matrix(NA,niter,4)
-    colnames(n_needed)<-c("AfS","ttestord", "po", "index")
+    colnames(n_needed)<-c("WMW","ttestord", "po", "index")
     actual_power2<-matrix(NA,niter,4)
-    colnames(actual_power2)<-c("AfS","ttestord", "po", "index")
+    colnames(actual_power2)<-c("WMW","ttestord", "po", "index")
     theta_p <- calculate_theta_A(p_C, p_E, r)[1,1] 
     for (i in 1:niter){
       set.seed(i)
@@ -96,14 +96,14 @@
       if(theta_diff>effect_cut){    print ("effect too small") ; next }
       
       # Calculate sample sizes
-      result_AfS<-samplesize_AfS(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
+      result_WMW<-samplesize_WMW(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
       result_ttestord<-samplesize_ttestord(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
       result_po <- samplesize_po_NN(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
-      n_needed[i,1]<- result_AfS$n_total
+      n_needed[i,1]<- result_WMW$n_total
       n_needed[i,2]<- result_ttestord$n_total
       n_needed[i,3]<- result_po$n_total
       n_needed[i,4]<- i
-      actual_power2[i,1]<-result_AfS$actual_power2
+      actual_power2[i,1]<-result_WMW$actual_power2
       actual_power2[i,2]<-result_ttestord$actual_power2
       actual_power2[i,3]<-result_po$actual_power2
       actual_power2[i,4]<-i
@@ -115,7 +115,7 @@
     actual_power_nmin<-actual_power2[cbind(1:length(whichnmin),whichnmin)]
     list(n_needed=n_needed,actual_power = actual_power2, 
          nmin=nmin,actual_power_nmin=actual_power_nmin,
-         method = c("AfS", "ttest", "PO")[whichnmin])
+         method = c("WMW", "ttest", "PO")[whichnmin])
   }
   
   # Apply Simulation function
@@ -146,9 +146,9 @@
   ### leave out pilot study when calculated sample size is too small or too big to try and get rid of under and overpowering
   simulation_samp_range <- function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05,beta=0.2, min_samp = 100, max_samp=1000){
     n_needed<-matrix(NA,niter,4)
-    colnames(n_needed)<-c("AfS","ttestord", "po", "index")
+    colnames(n_needed)<-c("WMW","ttestord", "po", "index")
     actual_power2<-matrix(NA,niter,4)
-    colnames(actual_power2)<-c("AfS","ttestord", "po", "index")
+    colnames(actual_power2)<-c("WMW","ttestord", "po", "index")
     for (i in 1:niter){
       set.seed(i)
       print(i)
@@ -156,19 +156,19 @@
       phat<-generate.pEpC.estimate(p_C=p_C, p_E=p_E, r=r, n_pilot=n_pilot)
       
       # Calculate sample sizes
-      result_AfS<-samplesize_AfS(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
+      result_WMW<-samplesize_WMW(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
       result_ttestord<-samplesize_ttestord(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
       result_po <- samplesize_po_NN(p_C=phat$C, p_E=phat$E, alpha=alpha, beta=beta, r=r, p_C2=p_C, p_E2=p_E)
-      n_min_samp <- min(c(result_AfS$n_total, result_ttestord$n_total, result_po$n_total))
+      n_min_samp <- min(c(result_WMW$n_total, result_ttestord$n_total, result_po$n_total))
       
       # Stop iteration when the calculated sample size is out of range
       if((n_min_samp<min_samp) | (n_min_samp>max_samp)){    print ("sample size not in range") ; next }
       
-      n_needed[i,1]<- result_AfS$n_total
+      n_needed[i,1]<- result_WMW$n_total
       n_needed[i,2]<- result_ttestord$n_total
       n_needed[i,3]<- result_po$n_total
       n_needed[i,4]<- i
-      actual_power2[i,1]<-result_AfS$actual_power2
+      actual_power2[i,1]<-result_WMW$actual_power2
       actual_power2[i,2]<-result_ttestord$actual_power2
       actual_power2[i,3]<-result_po$actual_power2
       actual_power2[i,4]<-i
@@ -181,7 +181,7 @@
     actual_power_nmin<-actual_power2[cbind(1:length(whichnmin),whichnmin)]
     list(n_needed=n_needed,actual_power = actual_power2, 
          nmin=nmin,actual_power_nmin=actual_power_nmin,
-         method = c("AfS", "ttest", "PO")[whichnmin])
+         method = c("WMW", "ttest", "PO")[whichnmin])
   }
   
   sim_samp_range <- simulation_samp_range(p_C, p_E, r=1, niter = 10000, n_pilot = 100, min_samp = 100, max_samp=1000)
@@ -297,7 +297,7 @@
 
   # Plot the mean minimum sample size and the median min sample size with quartiles
   sim_ss_plots(data=sim_r, group = c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)), 
-               xlabel="Allocation Ratio", plots=0)
+               xlabel="Allocation Ratio", plots=2)
   
     
   
@@ -397,7 +397,28 @@
   
   
 #### 5.5 Effect of normally distributed probabilities ####
-   # Simulation function
+  # Function to sample a vector with a normal distribution
+  normal_vector <- function(cat, niter=10000, theta_A , seed = 1){
+    set.seed(seed)
+    # sample normally distributed values
+    samp_norm <- rnorm(n = niter, mean = 0, sd = 1)
+    samp_df <- data.frame(value = samp_norm) 
+    # calculate the breaking points to categorize the values
+    breaks_norm <- (max(samp_norm)-min(samp_norm))/(cat)
+    # cut the values up into categories
+    samp_df$category <- cut(samp_df$value, 
+                            breaks=c(round(seq(min(samp_norm), max(samp_norm), breaks_norm),6)), 
+                            labels=c(1:cat)) 
+    p <- as.vector(prop.table(table(samp_df$category)))
+      p2 <- calc_p_E(p, theta_A = theta_A)
+      noise <- runif(cat, min = 0.95, max = 1.05) # Add random noise
+      p_noisy <- p2 * noise  # Apply noise and normalize
+      p2 <- p_noisy/sum(p_noisy)
+      p2 <- p2/sum(p2)
+
+    return(list(p, p2))
+  }
+  # Simulation function
   vary_norm <- function(n_pilot = 1000, niter = 10000, r = 1, rep = 10, vec_length = 6, theta = NA){
     rep_vec <- c(1:rep)
     results <- vector(mode = "list", length = rep)
@@ -415,10 +436,10 @@
   sim_norm <- vary_norm(n_pilot = 1000, rep=1, theta = log(0.4821251), vec_length = 4)
   
   # Plot simulation
-  sim_plots(sim_norm_new2, c(""), plots=0)
+  sim_plots(sim_norm, c(""), plots=0)
   
   # Summary statistics
-  sum_norm <- summary_statistics(sim_norm_new2, group =  c("norm"), d_label = "norm")
+  sum_norm <- summary_statistics(sim_norm, group =  c("norm"), d_label = "norm")
   print(xtable(sum_norm, caption=1, digits = 4), include.rownames = FALSE)
   
   # Median difference between smallest and biggest sample size in every iteration
@@ -459,4 +480,5 @@
   # r = 0.5
   sim_p_npilot_r05 <- vary_npilot(p_C, p_E, r=0.5)
   sim_plots(sim_p_npilot_r05, c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000), plots=0)
+  
   
