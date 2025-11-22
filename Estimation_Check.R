@@ -1,5 +1,5 @@
 
-# First run the file "Functions.R" to load the packages and function needed in this File
+# First run the file "Functions.R" to load the packages and functions needed in this File
 
 #### Estimation check for the t-test ####
 ### Function to compare power calculation from this t-test implementation and R base t-test

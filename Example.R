@@ -1,5 +1,5 @@
 
-# First run the file "Functions.R" to load the packages and function needed in this File
+# First run the file "Functions.R" to load the packages and functions needed in this File
 
 #### Use real RCTs with ordinal outcomes as pilot studies and compute the different sample sizes
 #### Boulesteix (2025)

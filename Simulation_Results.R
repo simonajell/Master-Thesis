@@ -1,5 +1,5 @@
 
-# First run the file "Functions.R" to load the packages and function needed in this File
+# First run the file "Functions.R" to load the packages and functions needed in this File
 
 
 #### 4.8 Determining the Number of Iterations ####
@@ -44,6 +44,13 @@
   sim_iter_large <- vary_npilot(p_C, p_E, r=1, niter = 10000,  npilot_vec = c(seq(150,1000,50), seq(1500, 12000, 500)))
   sim_scatter_plot(data=sim_iter_large, group = c(seq(150,1000,50), seq(1500, 12000, 500)), 
                    xlabel="Pilot Study Sample Size")
+  
+# Plot them together
+  grid.arrange(sim_scatter_plot(data=sim_iter_small, group = c(seq(150,1000,50), seq(1500, 12000, 500)), 
+                                xlabel="Pilot Study Sample Size"),
+               sim_scatter_plot(data=sim_iter_large, group = c(seq(150,1000,50), seq(1500, 12000, 500)), 
+                                xlabel="Pilot Study Sample Size"), 
+               ncol=2)
   
 #### 5.1 Effect of the pilot study sample size ####
   #### Results ####
@@ -336,7 +343,7 @@
   sim_p_theta <- vary_p_theta(n_pilot = 1000, theta_vec = log(c(seq(0.2, 1, 0.2),1.25, 1.5, 2.5, 4)), cat=4)
  
   # Plot the simulations
-  sim_plots(sim_p_theta, c(seq(0.2, 1, 0.2),1.25, 1.5, 2.5, 4), plots = 0)
+  sim_plots(sim_p_theta, c(seq(0.2, 1, 0.2),1.25, 1.5, 2.5, 4), plots = 2)
   
   # Summary statistics
   sum_theta <- summary_statistics(sim_p_theta, group = c(seq(0.2, 1, 0.2),1.25, 1.5, 2.5, 4), d_label = "theta")
@@ -375,14 +382,14 @@
   sim_cat_PO <- vary_prob_length_PO(n_pilot = 1000, theta = log(0.4821251))
   
   # Plot simulations
-  sim_plots(sim_cat_PO, c(3:14), plots=0)
+  sim_plots(sim_cat_PO, c(3:14), plots=2)
   
   # Summary statistics
   sum_cat <- summary_statistics(sim_cat_PO, group = c(3:14), d_label = "categories")
   print(xtable(sum_cat, caption=1, digits=4), include.rownames = FALSE)
   
   # Scatter plot of mean actual powers
-  sim_scatter_plot(data=sim_cat_PO_same, group = c(3:14), xlabel="Number of Categories")
+  sim_scatter_plot(data=sim_cat_PO, group = c(3:14), xlabel="Number of Categories")
   
   # Median difference between smallest and biggest sample size in every iteration
   diff_table_cat <- median_diff(sim_cat_PO, c(3:14), power = FALSE)
@@ -392,10 +399,7 @@
   sim_ss_plots(sim_cat_PO, c(3:14), xlabel = "Number of Categories", plots = 2)
   
   
-  
-  
-  
-  
+
 #### 5.5 Effect of normally distributed probabilities ####
   # Function to sample a vector with a normal distribution
   normal_vector <- function(cat, niter=10000, theta_A , seed = 1){
@@ -445,12 +449,19 @@
   # Median difference between smallest and biggest sample size in every iteration
   median_diff(sim_norm, c(""), power = FALSE)
   
-  # Comparison to a not-normally distributed simulation
+  ### Comparison to a not-normally distributed simulation
+  # Simulation with n_pilot=1000
   sim_npilot_1000 <- list(sim_npilot[[5]])
-  sim_plots(sim_npilot_1000, c(""), plots=0) # Plot simulation
+  
+  # Plot simulation
+  sim_plots(sim_npilot_1000, c(""), plots=2)
+  
+  # Summary Statistics
   sum_norm2 <- summary_statistics(sim_npilot_1000, group =  c("not-norm"), d_label = "not-norm") # summary statistics
   print(xtable(sum_norm2, caption=1, digits = 4), include.rownames = FALSE) 
-  median_diff(sim_npilot_1000, c(""), power = FALSE) # Median difference
+  
+  # Median difference between smallest and biggest sample size in every iteration
+  median_diff(sim_npilot_1000, c(""), power = FALSE)
   
 #### 5.6 Combined Factors ####
   ### Combination of treatment effect size and pilot study sample size
