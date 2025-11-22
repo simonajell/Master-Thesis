@@ -623,6 +623,24 @@ p_E <- c(0.1, 0.2, 0.4, 0.3)
     }
     return(p_e_2)
   }
+#### Function that generates a simplex vector  ####
+  # Calculate a random simplex vector without zero categories
+  random_simplex <- function(n) {
+    success <- FALSE
+    # a random vector is sampled, as long as all vector elements are not 0
+    while (!success) {
+      # Gamma Distribution
+      x <- rgamma(n, shape = 1, rate = 1)  
+      
+      # Normalize vector
+      x <- x / sum(x)
+      
+      # Check for success
+      success <- all(x > 0)
+    }
+    return(x)
+  }
+  
 #### Function that generates a simplex vector with a uniform distribution ####
   uniform_simplex <- function(n) {
     # Create the uniform vector
@@ -636,4 +654,23 @@ p_E <- c(0.1, 0.2, 0.4, 0.3)
     uni_noisy <- uni_noisy/sum(uni_noisy)
     return(list(uni, uni_noisy))
   }  
+  
+#### Function that generates two simplex vectors with a specific log odd ratio ####
+  generate_two_simplex_vectors <- function(n, theta = log(1.8)) {
+    # Vector A: Gamma Distribution
+    a <- rgamma(n, shape = 1, rate = 1)
+    a <- a / sum(a)
+    
+    # Vector B: calculated with log odds ratio and random noise
+    b <- calc_p_E(a, theta_A = theta)
+    
+    # Add random noise, so PO assumption isnt fulfilled 
+    noise <- runif(n, min = 0.9, max = 1.1)
+    
+    # Apply noise and normalize
+    p_noisy <- b * noise  
+    b <- p_noisy/sum(p_noisy)
+    
+    list(a = a, b = b)
+  }
   

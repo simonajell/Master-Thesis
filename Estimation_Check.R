@@ -28,7 +28,7 @@
   sim_comp_ttest <- comp_ttest(iter = 10000)
   
   # Mean absolute difference between power calculated from this t-test and R base t-test
-  mean(abs(sim_comp_ttest$ttestord-comp_ttest2$R)) # 0.004933035
+  mean(abs(sim_comp_ttest$ttestord-sim_comp_ttest$R)) # 0.0002397253
   
   # Plot comparison
   ggplot(data=sim_comp_ttest, aes(x=ttestord, y=R))+
@@ -104,7 +104,7 @@
   sim_comp_PO_theta <- theta_comparison(comp_iter = 10000, r=1)
   
   # Mean absolute difference between estimated theta and true theta
-  mean(sim_comp_PO_theta$diff) # 0.0005192367
+  mean(sim_comp_PO_theta$diff) # 0.0005697382
   
   # Plot comparison
   ggplot(data=sim_comp_PO_theta, aes(x=theta_A, y=est_theta))+
@@ -120,21 +120,33 @@
     for (i in seq_along(1:comp_iter)) {
       set.seed(i)
       print(i)
+      
+      # Sample the number of categories
       vec_length <- sample(3:14, 1)
+      
+      # Sample the odds ratio
       theta_random <- runif(1, min = 0.1, max = 5)
+      
+      # Sample a control vector
       p_c_po <- random_simplex(vec_length)
+      
+      # Calculate the experimental vector 
       p_e_po <- calc_p_E(p_c_po, theta_A = log(theta_random))
+      
+      # Save the sampled odds ratio
       var_results[i,1] <- theta_random
-      # White method
+      
+      # Calculate variance with White method
       var_results[i,2] <- calculate_theta_N(p_c_po, p_e_po, r)[1,2]^2
       
-      # Kieser method
+      # Calculate variance with Kieser method
       x = 0
-      for (j in 1:vec_length){
+      for (j in seq_along(1:vec_length)){
         x = x + ((r*p_c_po[j] + p_e_po[j]) / (1 + r))^3
       }
       var_results[i,3] <- ((1+r)^2/r)* (3/(1-x))
     }
+    # Calculate difference between the two variances
     var_results$diff <- abs(var_results$var_w - var_results$var_k)
     return(var_results)
   }
@@ -143,7 +155,7 @@
   sim_comp_PO_var <- var_comparison(comp_iter = 10000, r=1)
   
   # Mean absolute difference between estimated variance by White and Whitehead
-  mean(sim_comp_PO_var$diff) #0.0007753717
+  mean(sim_comp_PO_var$diff) #0.000818111
 
   # Plot comparison
   ggplot(data=sim_comp_PO_var, aes(x=var_w, y=var_k))+
@@ -176,9 +188,6 @@
       results_AA <- rbind(results_AA, as.data.frame(samplesize_po_AA(p_C=p_C, p_E=p_E, alpha, beta, r)))
       results_NA <- rbind(results_NA, as.data.frame(samplesize_po_NA(p_C=p_C, p_E=p_E, alpha, beta, r)))
       results_k <- rbind(results_k, as.data.frame(samplesize_po_kieser(p_C=p_C, p_E=p_E, alpha, beta, r)))
-      results_k_known <- rbind(results_k_known, 
-                               as.data.frame(samplesize_po_kieser_known(p_C=p_C, p_E=p_E, theta = theta_A, alpha, beta, r)))
-      
     }
     return(list(results_NN, results_k, results_AA, results_NA, results_k_known, theta_vec, true_theta_vec))
   }
@@ -186,11 +195,21 @@
   sim_comp_PO_samp <- comp_PO_samp(iter = 10000)
   
   # Percentage of equal sample sizes calculated from White and Whitehead
-  length(which(sim_comp_PO_samp[[1]]$n_total == sim_comp_PO_samp[[2]]$n_total))/10000 # 96.67% , 149 unequal
+  length(which(sim_comp_PO_samp[[1]]$n_total == sim_comp_PO_samp[[2]]$n_total))/10000 # 96.63% , 149 unequal
   
   # Mean absolute difference between sample size calculated by White and Whitehead
-  mean(abs(sim_comp_PO_samp[[1]]$n_total - sim_comp_PO_samp[[2]]$n_total)) # 16.3678
+  mean(abs(sim_comp_PO_samp[[1]]$n_total - sim_comp_PO_samp[[2]]$n_total)) # 16.3688
   
-
+  # Plot comparison
+  SS_comp_PO <- data.frame("White" = sim_comp_PO_samp[[1]]$n_total,
+                           "Whitehead" = sim_comp_PO_samp[[2]]$n_total)
+  ggplot(data=SS_comp_PO, aes(x=White, y=Whitehead))+
+    geom_point(alpha=0.6)+
+    geom_abline(slope=1, color="red")+
+    xlab("Sample Size by White")+
+    ylab("Sample Size by Whitehead")+
+    ylim(0,100000)+
+    xlim(0,100000)+
+    theme_bw()
 
   
