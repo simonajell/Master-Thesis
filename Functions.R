@@ -394,50 +394,58 @@ p_E <- c(0.1, 0.2, 0.4, 0.3)
     df_data <- df_data %>% group_by(group) %>%  mutate(mean = mean(power_nmin))
     df_data$method <- as.factor(df_data$method)
     df_data$method <- relevel(df_data$method, "ttest")
-    
+
     # Plot the histograms
     # plot1: histogram of the actual power distribution for every simulation
     # plot2: plot1 separated by the method used to calculate the smallest sample size
     # here one has the choice to have the same scales in every histogram or free scales in every simulation
     if(same_scale == TRUE){
-      plot1 <- ggplot(df_data, aes(x = power_nmin))+ 
-        geom_histogram(fill = "grey", color = "black", position = "identity")+
-        geom_vline(aes(xintercept = mean, group = group), color = "red")+
-        geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
-        facet_wrap(group ~.) +
-        xlab("Actual Power")+
-        ylab("Count")+
+      plot1 <- ggplot(df_data, aes(x = power_nmin)) + 
+        geom_histogram(fill = "grey", color = "black", position = "identity") +
+        geom_vline(aes(xintercept = mean, colour = "Mean", linetype = "Mean")) + # mean line
+        geom_vline(aes(xintercept = 0.8, colour = "80% Power", linetype = "80% Power")) + # target line
+        facet_wrap(group ~ .) +
+        scale_colour_manual(values = c("Mean" = "red", "80% Power" = "red")) +
+        scale_linetype_manual(values = c("Mean" = "solid", "80% Power" = "dotted")) +
+        labs(colour = "Lines", linetype = "Lines") +
+        xlab("Actual Power of Minimum Sample Size") +
+        ylab("Count") +
         theme_bw()
       plot2 <- ggplot(df_data, aes(x = power_nmin, fill = method, colour = method))+ 
         facet_wrap(group ~.) +
         geom_histogram(alpha = 0.3, position = "identity")+
-        scale_colour_manual(values = c("PO" = "#7CAE00", "ttest" = "#00008B", "WMW" = "#C77CFF")) +
-        scale_fill_manual(values = c("PO" = "#7CAE00", "ttest" = "#00008B", "WMW" = "#C77CFF")) +
-        geom_vline(aes(xintercept = mean, group = group), color = "red")+
-        geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
-        xlab("Actual Power")+
+        geom_vline(aes(xintercept = mean, group = group,linetype = "Mean"), colour = "red")+
+        geom_vline(aes(xintercept = 0.8, linetype = "80% Power"), colour = "red")+
+        scale_colour_manual(name= "Method", 
+                            values = c("PO" = "#7CAE00", "ttest" = "#00008B", "WMW" = "#C77CFF"), 
+                            aesthetics = c("colour", "fill")) +
+        scale_linetype_manual(name = "Lines", values = c("Mean" = "solid", "80% Power" = "dotted")) +
+        xlab("Actual Power of Minimum Sample Size")+
         ylab("Count")+
-        labs(colour="Method", fill="Method")+
         theme_bw()
     } else if(same_scale == FALSE){
-      plot1 <- ggplot(df_data, aes(x = power_nmin))+ 
-        geom_histogram(fill = "grey", color = "black", position = "identity")+
-        geom_vline(aes(xintercept = mean, group = group), color = "red")+
-        geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
-        facet_wrap(group ~., scales="free_y") +
-        xlab("Actual Power")+
-        ylab("Count")+
+      plot1 <- ggplot(df_data, aes(x = power_nmin)) + 
+        geom_histogram(fill = "grey", color = "black", position = "identity") +
+        geom_vline(aes(xintercept = mean, colour = "Mean", linetype = "Mean")) + # mean line
+        geom_vline( aes(xintercept = 0.8, colour = "80% Power", linetype = "80% Power")) + # target line
+        facet_wrap(group ~ ., scales="free_y") +
+        scale_colour_manual(values = c("Mean" = "red", "80% Power" = "red")) +
+        scale_linetype_manual(values = c("Mean" = "solid", "80% Power" = "dotted")) +
+        labs(colour = "Lines", linetype = "Lines") +
+        xlab("Actual Power of Minimum Sample Size") +
+        ylab("Count") +
         theme_bw()
-      plot2 <- ggplot(df_data, aes(x = power_nmin, fill = method, colour = method))+ 
-        facet_wrap(group ~., scales="free_y") +
+      plot2 <-ggplot(df_data, aes(x = power_nmin, fill = method, colour = method))+ 
+        facet_wrap(group ~., scales = "free_y") +
         geom_histogram(alpha = 0.3, position = "identity")+
-        scale_colour_manual(values = c("PO" = "#7CAE00", "ttest" = "#00008B", "WMW" = "#C77CFF")) +
-        scale_fill_manual(values = c("PO" = "#7CAE00", "ttest" = "#00008B", "WMW" = "#C77CFF")) +
-        geom_vline(aes(xintercept = mean, group = group), color = "red")+
-        geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
-        xlab("Actual Power")+
+        geom_vline(aes(xintercept = mean, group = group, linetype = "Mean"), colour = "red")+
+        geom_vline(aes(xintercept = 0.8, linetype = "80% Power"), colour = "red")+
+        scale_colour_manual(name= "Method", 
+                            values = c("PO" = "#7CAE00", "ttest" = "#00008B", "WMW" = "#C77CFF"), 
+                            aesthetics = c("colour", "fill")) +
+        scale_linetype_manual(name = "Lines", values = c("Mean" = "solid", "80% Power" = "dotted")) +
+        xlab("Actual Power of Minimum Sample Size")+
         ylab("Count")+
-        labs(colour="Method", fill="Method")+
         theme_bw()
     }
     if(plots==0){
@@ -466,7 +474,7 @@ p_E <- c(0.1, 0.2, 0.4, 0.3)
       geom_point()+
       geom_hline(yintercept=0.8, color = "red", linetype = "dotted")+
       xlab(xlabel)+
-      ylab("Mean Actual Power")+
+      ylab("Mean Actual Power of Minimum Sample Size")+
       theme_bw()
   }
   
@@ -609,7 +617,6 @@ p_E <- c(0.1, 0.2, 0.4, 0.3)
   # Function to calculate p_E when p_C and theta_A are known
   calc_p_E <- function(p_C, theta_A){
   
-    # Use Formula 8 in Section 2.5 to calculate the cumulative experimental probability vector
     p_e_1 <- rep(0, length(p_C))
     for (i in seq_along(1:length(p_C))) {
       p_e_1[i] <- sum(p_C[1:i])/(sum(p_C[1:i])+((1-sum(p_C[1:i]))*exp(-theta_A)))

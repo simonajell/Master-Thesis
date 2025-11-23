@@ -17,7 +17,7 @@
   sim_niter <- vary_niter(p_C, p_E, n_pilot = 1000)
   
 # Plot the Simulations
-  sim_plots(sim_niter, c(100, 500, 1000, 2500, 5000, 7500, 10000, 15000, 20000), same_scale = FALSE)
+  sim_plots(sim_niter, c(100, 500, 1000, 2500, 5000, 7500, 10000, 15000, 20000), same_scale = FALSE, plots=0)
   
 # Summary statistics
   sum_iter <- summary_statistics(sim_niter, group = c(100, 500, 1000, 2500, 5000, 7500, 10000, 15000, 20000), d_label = "iterations")
@@ -129,25 +129,41 @@
   test_eff_cut <- simulation_diff_effect(p_C, p_E, n_pilot=100, niter=10000, effect_cut = 0.15)
   length(test_eff_cut$actual_power_nmin)
   mean(test_eff_cut$actual_power_nmin)
+
+  # Save in Data Frame
+  df_eff_cut <- data.frame(power = test_eff_cut$actual_power_nmin) %>%
+    mutate(mean = mean(power),
+           type = "Cut") 
   
-  # Plot the simulation
-  df_eff_cut <-  data.frame("power"=test_eff_cut$actual_power_nmin)%>% 
-    mutate(mean = mean(power))
+  ### Simulation for Comparison
+  sim100 <- simulation(p_C,p_E,n_pilot=100,niter=10000)
+  df_no_cut <- data.frame(power_no_cut = sim100$actual_power_nmin) %>%
+    mutate(mean = mean(power_no_cut),
+           type = "No Cut") %>%        
+    rename(power = power_no_cut)            
   
-    ### Simulation for Comparison
-    sim100 <- simulation(p_C,p_E,n_pilot=100,niter=10000)
-    df_eff_no_cut <-  data.frame("power_no_cut"=sim100$actual_power_nmin)%>% 
-      mutate(mean = mean(power_no_cut))
-    
-  ggplot(df_eff_cut, aes(x = power)) + 
-    geom_histogram(data=df_eff_no_cut, mapping=aes(x=power_no_cut),alpha=0.15, fill = "red", color = "darkgrey",position = "identity") +
-    geom_histogram(fill = "grey", color = "black",position = "identity") +
-    geom_vline(aes(xintercept = mean), color = "red")+
-    geom_vline(data=df_eff_no_cut, aes(xintercept = mean), color = "red", alpha=0.5)+
-    geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
-    xlab("Actual Power")+
+  
+  # Combine Datasets
+  df_eff <- bind_rows(df_no_cut, df_eff_cut)
+  df_eff$type <- as.factor(df_eff$type)
+  df_eff$type <- relevel(df_eff$type, "No Cut")
+
+  # Plot 
+  ggplot(df_eff) + 
+    geom_histogram(aes(x = power, fill = type, colour = type, alpha = type), position = "identity")+
+    geom_vline(aes(xintercept = mean, alpha = type, colour = type), alpha = 0.5)+
+    geom_vline(aes(xintercept = 0.8, linetype = "80% Power", colour = "No Cut"), colour = "red")+
+    scale_alpha_manual(name = "Method", values = c("Cut"=1, "No Cut"=0.3))+
+    scale_colour_manual(name= "Method", values = c("Cut" = "black", "No Cut" = "red")) +
+    scale_fill_manual(name= "Method", values = c("Cut" = "grey", "No Cut" = "red")) +
+    scale_linetype_manual(name = "", values = c("80% Power" = "dotted")) +
+    xlab("Actual Power of Minimum Sample Size")+
     ylab("Count")+
-    theme_bw()
+    theme_bw()+
+    theme(legend.spacing.y = unit(0, "cm"), legend.margin=margin(t=0, r=0.5, b=0, l=0.5, unit="cm")) +
+    guides(fill = guide_legend(order = 1), colour = guide_legend(order = 1), alpha = guide_legend(order = 1),
+           linetype = guide_legend(order = 2))
+
   
 
   ### leave out pilot study when calculated sample size is too small or too big to try and get rid of under and overpowering
@@ -195,51 +211,93 @@
   mean(sim_samp_range$actual_power_nmin, na.rm = TRUE)
   length(sim_samp_range$actual_power_nmin)
   
-  # Plot the distribution of the cut off simulation and of the un-cut simulation
-  df_samp_cut <-  data.frame("power"=sim_samp_range$actual_power_nmin)%>% 
-    mutate(mean = mean(power, na.rm = TRUE))
-  ggplot(df_samp_cut, aes(x = power)) + 
-    geom_histogram(data=df_eff_no_cut, mapping=aes(x=power_no_cut),alpha=0.15, fill = "red", color = "darkgrey",position = "identity") +
-    geom_histogram(fill = "grey", color = "black",position = "identity") +
-    geom_vline(aes(xintercept = mean), color = "red")+
-    geom_vline(data=df_eff_no_cut, aes(xintercept = mean), color = "red", alpha=0.5)+
-    geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
-    xlab("Actual Power")+
-    ylab("Count")+
-    theme_bw()
+  # Save in Data Frame
+  df_samp_cut <- data.frame(power = sim_samp_range$actual_power_nmin) %>%
+    mutate(mean = mean(power, na.rm = TRUE),
+           type = "Cut") 
   
-  # Do this with milder limits
+  # Combine Datasets
+  df_samp <- bind_rows(df_no_cut, df_samp_cut)
+  df_samp$type <- as.factor(df_samp$type)
+  df_samp$type <- relevel(df_samp$type, "No Cut")
+
+  #  Plot the distribution of the cut off simulation and of the un-cut simulation 
+  ggplot(df_samp) + 
+    geom_histogram(aes(x = power, fill = type, colour = type, alpha = type), position = "identity")+
+    geom_vline(aes(xintercept = mean, alpha = type, colour = type), alpha = 0.5)+
+    geom_vline(aes(xintercept = 0.8, linetype = "80% Power", colour = "No Cut"), colour = "red")+
+    scale_alpha_manual(name = "Method", values = c("Cut"=1, "No Cut"=0.3))+
+    scale_colour_manual(name= "Method", values = c("Cut" = "black", "No Cut" = "red")) +
+    scale_fill_manual(name= "Method", values = c("Cut" = "grey", "No Cut" = "red")) +
+    scale_linetype_manual(name = "", values = c("80% Power" = "dotted")) +
+    xlab("Actual Power of Minimum Sample Size")+
+    ylab("Count")+
+    theme_bw()+
+    theme(legend.spacing.y = unit(0, "cm"), legend.margin=margin(t=0, r=0.5, b=0, l=0.5, unit="cm")) +
+    guides(fill = guide_legend(order = 1), colour = guide_legend(order = 1), alpha = guide_legend(order = 1),
+           linetype = guide_legend(order = 2))
+  
+  
+  ### Do this with milder limits
   sim_samp_range_mild <- simulation_samp_range(p_C, p_E, r=1, niter = 10000, n_pilot = 100, min_samp = 50, max_samp=1500)
   mean(sim_samp_range_mild$actual_power_nmin, na.rm = TRUE)
-  hist(sim_samp_range_mild$actual_power_nmin)
-  df_samp_cut_mild <-  data.frame("power"=sim_samp_range_mild$actual_power_nmin)%>% 
-    mutate(mean = mean(power, na.rm = TRUE))
-  ggplot(df_samp_cut_mild, aes(x = power)) + 
-    geom_histogram(data=df_eff_no_cut, mapping=aes(x=power_no_cut),alpha=0.15, fill = "red", color = "darkgrey",position = "identity") +
-    geom_histogram(fill = "grey", color = "black",position = "identity") +
-    geom_vline(aes(xintercept = mean), color = "red")+
-    geom_vline(data=df_eff_no_cut, aes(xintercept = mean), color = "red", alpha=0.5)+
-    geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
-    xlab("Actual Power")+
-    ylab("Count")+
-    theme_bw()
   
-
-  # Do this with stricter limits
+  # Save in Data Frame
+  df_samp_cut_mild <- data.frame(power = sim_samp_range_mild$actual_power_nmin) %>%
+    mutate(mean = mean(power, na.rm = TRUE),
+           type = "Cut") 
+  
+  # Combine Datasets
+  df_samp_mild <- bind_rows(df_no_cut, df_samp_cut_mild)
+  df_samp_mild$type <- as.factor(df_samp_mild$type)
+  df_samp_mild$type <- relevel(df_samp_mild$type, "No Cut")
+  
+  #  Plot the distribution of the cut off simulation and of the un-cut simulation 
+  ggplot(df_samp_mild) + 
+    geom_histogram(aes(x = power, fill = type, colour = type, alpha = type), position = "identity")+
+    geom_vline(aes(xintercept = mean, alpha = type, colour = type), alpha = 0.5)+
+    geom_vline(aes(xintercept = 0.8, linetype = "80% Power", colour = "No Cut"), colour = "red")+
+    scale_alpha_manual(name = "Method", values = c("Cut"=1, "No Cut"=0.3))+
+    scale_colour_manual(name= "Method", values = c("Cut" = "black", "No Cut" = "red")) +
+    scale_fill_manual(name= "Method", values = c("Cut" = "grey", "No Cut" = "red")) +
+    scale_linetype_manual(name = "", values = c("80% Power" = "dotted")) +
+    xlab("Actual Power of Minimum Sample Size")+
+    ylab("Count")+
+    theme_bw()+
+    theme(legend.spacing.y = unit(0, "cm"), legend.margin=margin(t=0, r=0.5, b=0, l=0.5, unit="cm")) +
+    guides(fill = guide_legend(order = 1), colour = guide_legend(order = 1), alpha = guide_legend(order = 1),
+           linetype = guide_legend(order = 2))
+  
+  ### Do this with stricter limits
   sim_samp_range_strict <- simulation_samp_range(p_C, p_E, r=1, niter = 10000, n_pilot = 100, min_samp = 150, max_samp=750)
   mean(sim_samp_range_strict$actual_power_nmin, na.rm = TRUE)
-  hist(sim_samp_range_strict$actual_power_nmin)
-  df_samp_cut_strict <-  data.frame("power"=sim_samp_range_strict$actual_power_nmin)%>% 
-    mutate(mean = mean(power, na.rm = TRUE))
-  ggplot(df_samp_cut_strict, aes(x = power)) + 
-    geom_histogram(data=df_eff_no_cut, mapping=aes(x=power_no_cut),alpha=0.15, fill = "red", color = "darkgrey",position = "identity") +
-    geom_histogram(fill = "grey", color = "black",position = "identity") +
-    geom_vline(aes(xintercept = mean), color = "red")+
-    geom_vline(data=df_eff_no_cut, aes(xintercept = mean), color = "red", alpha=0.5)+
-    geom_vline(xintercept = 0.8, color = "red", linetype="dotted")+
-    xlab("Actual Power")+
+  
+  # Save in Data Frame
+  df_samp_cut_strict <- data.frame(power = sim_samp_range_strict$actual_power_nmin) %>%
+    mutate(mean = mean(power, na.rm = TRUE),
+           type = "Cut") 
+  
+  # Combine Datasets
+  df_samp_strict <- bind_rows(df_no_cut, df_samp_cut_strict)
+  df_samp_strict$type <- as.factor(df_samp_strict$type)
+  df_samp_strict$type <- relevel(df_samp_strict$type, "No Cut")
+  
+  #  Plot the distribution of the cut off simulation and of the un-cut simulation 
+  ggplot(df_samp_strict) + 
+    geom_histogram(aes(x = power, fill = type, colour = type, alpha = type), position = "identity")+
+    geom_vline(aes(xintercept = mean, alpha = type, colour = type), alpha = 0.5)+
+    geom_vline(aes(xintercept = 0.8, linetype = "80% Power", colour = "No Cut"), colour = "red")+
+    scale_alpha_manual(name = "Method", values = c("Cut"=1, "No Cut"=0.3))+
+    scale_colour_manual(name= "Method", values = c("Cut" = "black", "No Cut" = "red")) +
+    scale_fill_manual(name= "Method", values = c("Cut" = "grey", "No Cut" = "red")) +
+    scale_linetype_manual(name = "", values = c("80% Power" = "dotted")) +
+    xlab("Actual Power of Minimum Sample Size")+
     ylab("Count")+
-    theme_bw()
+    theme_bw()+
+    theme(legend.spacing.y = unit(0, "cm"), legend.margin=margin(t=0, r=0.5, b=0, l=0.5, unit="cm")) +
+    guides(fill = guide_legend(order = 1), colour = guide_legend(order = 1), alpha = guide_legend(order = 1),
+           linetype = guide_legend(order = 2))
+
   
 #### 5.2 Effect of the allocation ratio ####
   #### Visualise the sample sizes for different allocations ####
@@ -343,7 +401,7 @@
   sim_p_theta <- vary_p_theta(n_pilot = 1000, theta_vec = log(c(seq(0.2, 1, 0.2),1.25, 1.5, 2.5, 4)), cat=4)
  
   # Plot the simulations
-  sim_plots(sim_p_theta, c(seq(0.2, 1, 0.2),1.25, 1.5, 2.5, 4), plots = 2)
+  sim_plots(sim_p_theta, c(seq(0.2, 1, 0.2),1.25, 1.5, 2.5, 4), plots = 0)
   
   # Summary statistics
   sum_theta <- summary_statistics(sim_p_theta, group = c(seq(0.2, 1, 0.2),1.25, 1.5, 2.5, 4), d_label = "theta")
@@ -382,7 +440,7 @@
   sim_cat_PO <- vary_prob_length_PO(n_pilot = 1000, theta = log(0.4821251))
   
   # Plot simulations
-  sim_plots(sim_cat_PO, c(3:14), plots=2)
+  sim_plots(sim_cat_PO, c(3:14), plots=0)
   
   # Summary statistics
   sum_cat <- summary_statistics(sim_cat_PO, group = c(3:14), d_label = "categories")
@@ -454,7 +512,7 @@
   sim_npilot_1000 <- list(sim_npilot[[5]])
   
   # Plot simulation
-  sim_plots(sim_npilot_1000, c(""), plots=2)
+  sim_plots(sim_npilot_1000, c(""), plots=0)
   
   # Summary Statistics
   sum_norm2 <- summary_statistics(sim_npilot_1000, group =  c("not-norm"), d_label = "not-norm") # summary statistics
