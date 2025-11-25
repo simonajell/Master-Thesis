@@ -472,7 +472,7 @@ p_E <- c(0.1, 0.2, 0.4, 0.3)
     # Plot the mean actual powers on the y-axis and the varied component on the x-axis
     ggplot(sim_df, aes(x=xcol, y=mean_col)) +
       geom_point()+
-      geom_hline(yintercept=0.8, color = "red", linetype = "dotted")+
+      geom_hline(yintercept=0.8, colour = "red", linetype = "dotted")+
       xlab(xlabel)+
       ylab("Mean Actual Power of Minimum Sample Size")+
       theme_bw()
@@ -634,7 +634,7 @@ p_E <- c(0.1, 0.2, 0.4, 0.3)
   # Calculate a random simplex vector without zero categories
   random_simplex <- function(n) {
     success <- FALSE
-    # a random vector is sampled, as long as all vector elements are not 0
+    # A random vector is sampled, as long as all vector elements are not 0
     while (!success) {
       # Gamma Distribution
       x <- rgamma(n, shape = 1, rate = 1)  

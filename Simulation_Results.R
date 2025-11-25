@@ -6,6 +6,7 @@
 # Function to vary the number of iterations
   vary_niter <- function(p_C, p_E, n_pilot = 1000, r = 1, niter_vec = c(100, 500, 1000, 2500, 5000, 7500, 10000, 15000, 20000)){
     results <- vector(mode = "list", length = length(niter_vec))
+    # Iterate over the desired numbers of iterations to vary and save simulation result
     for (i in seq_along(niter_vec)) {
       sim <- simulation(p_C, p_E, r = r, n_pilot = n_pilot, niter = niter_vec[i])
       results[[i]] <- sim
@@ -17,7 +18,7 @@
   sim_niter <- vary_niter(p_C, p_E, n_pilot = 1000)
   
 # Plot the Simulations
-  sim_plots(sim_niter, c(100, 500, 1000, 2500, 5000, 7500, 10000, 15000, 20000), same_scale = FALSE, plots=0)
+  sim_plots(sim_niter, c(100, 500, 1000, 2500, 5000, 7500, 10000, 15000, 20000), same_scale = FALSE, plots=1)
   
 # Summary statistics
   sum_iter <- summary_statistics(sim_niter, group = c(100, 500, 1000, 2500, 5000, 7500, 10000, 15000, 20000), d_label = "iterations")
@@ -27,6 +28,7 @@
   # Function to vary pilot study sample size
   vary_npilot <- function(p_C, p_E, niter = 10000, r = 1, npilot_vec = c(50, 100, 200, 500, 1000, 2500, 5000, 10000, 15000)){
     results <- vector(mode = "list", length = length(npilot_vec))
+    # Iterate over the desired pilot study sample sizes to vary and save simulation result
     for (i in seq_along(npilot_vec)) {
       sim <- simulation(p_C, p_E, r = r, niter = niter, n_pilot = npilot_vec[i])
       results[[i]] <- sim
@@ -82,6 +84,7 @@
   ##### Explanation for over- and underpowering in small pilot studies ####
   
   ### leave out study when effect is very small
+  # Same as normal simulation function, but with step to calculate the difference between the true and estimated treatment effect
   simulation_diff_effect<-function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05,beta=0.2, effect_cut){
     n_needed<-matrix(NA,niter,4)
     colnames(n_needed)<-c("WMW","ttestord", "po", "index")
@@ -127,7 +130,7 @@
   
   # Apply Simulation function
   test_eff_cut <- simulation_diff_effect(p_C, p_E, n_pilot=100, niter=10000, effect_cut = 0.15)
-  length(test_eff_cut$actual_power_nmin)
+  length(test_eff_cut$actual_power_nmin) # 3171 iterations estimated accurate enough treatment effects
   mean(test_eff_cut$actual_power_nmin)
 
   # Save in Data Frame
@@ -167,6 +170,7 @@
   
 
   ### leave out pilot study when calculated sample size is too small or too big to try and get rid of under and overpowering
+  # Same as normal simulation function, but with step to skip iteration if the minimum sample size is too small or large
   simulation_samp_range <- function(p_C, p_E, r=1, n_pilot, niter=1000, alpha=0.05,beta=0.2, min_samp = 100, max_samp=1000){
     n_needed<-matrix(NA,niter,4)
     colnames(n_needed)<-c("WMW","ttestord", "po", "index")
@@ -335,18 +339,25 @@
   # Function to vary the allocation ratio
   vary_r <- function(p_C, p_E, n_pilot = 10000, niter = 10000, r_vec){
     results <- vector(mode = "list", length = length(r_vec))
+    # Iterate over the desired allocation ratios to vary and save simulation result
     for (i in seq_along(r_vec)) {
       sim <- simulation(p_C, p_E, n_pilot=n_pilot, niter=niter, r=r_vec[i])
       results[[i]] <- sim
     }
     return(results)
   }
+  
   # Apply simulation function
   sim_r <- vary_r(p_C, p_E, n_pilot = 1000, r_vec=c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)))
   
   # Plot the simulation
   sim_plots(sim_r, c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)), plots=0)
   
+  # Study the confidence intervals, to try and find out the reason for the higher power under r=0.5
+  t.test(sim_r[[3]]$actual_power_nmin) # CI [0.7899;0.7944]
+  t.test(sim_r[[4]]$actual_power_nmin) # CI [0.7877;0.7921]
+  t.test(sim_r[[5]]$actual_power_nmin) # CI [0.7873;0.7917]
+  t.test(sim_r[[6]]$actual_power_nmin) # CI [0.7880;0.7923]
 
   # Summary
   sum_r <- summary_statistics(sim_r, group = c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)), d_label = "r")
@@ -363,20 +374,23 @@
   # Plot the mean minimum sample size and the median min sample size with quartiles
   sim_ss_plots(data=sim_r, group = c(seq(0.1, 0.9, 0.2), 1, seq(2,7,1)), 
                xlabel="Allocation Ratio", plots=2)
-  
-    
-  
+
 #### 5.3 Effect of the treatment effect size ####
   ## Function to vary effect size theta
   vary_p_theta <- function(n_pilot = 1000, niter = 10000, r_val = 1, cat = 6, theta_vec=log(seq(0.1, 2.5, 0.4))){
     p_results <- data.frame()
     results <- vector(mode = "list", length = length(theta_vec))
+    # Iterate over the desired treatment effects to vary and save simulation result
     for (i in seq_along(theta_vec)) {
       set.seed(1)
-      p_C1 <- uniform_simplex(cat)[[1]] ## try random_simplex here
+      # Sample uniformly distributed control probability vector p_C
+      p_C1 <- uniform_simplex(cat)[[1]] 
+      # Calculate experimental vector p_E to have the specific treatment effect
       p_E1 <- calc_p_E(p_C1, theta_A = theta_vec[i])
-      noise <- runif(cat, min = 0.95, max = 1.05) # Add random noise, so PO assumption isnt fulfilled and PO method doesnt have advantage
-      p_noisy <- p_E1 * noise  # Apply noise and normalize
+      # Add random noise, so PO assumption isnt fulfilled and PO method doesnt have advantage
+      noise <- runif(cat, min = 0.95, max = 1.05) 
+      # Apply noise and normalize
+      p_noisy <- p_E1 * noise  
       p_E1 <- p_noisy/sum(p_noisy)
       # Apply the simulation to the new probability vectors
       sim <- simulation(p_C=p_C1, p_E=p_E1, n_pilot=n_pilot, niter=niter, r=r_val)
@@ -385,17 +399,17 @@
     return(results)
   }
   
-  # What is the odds ratio for OR=1 after applying noise
-  set.seed(1)
-  p_C1 <- uniform_simplex(4)[[1]] 
-  p_E1 <- calc_p_E(p_C1, theta_A = log(1))
-  set.seed(1)
-  # Apply noise
-  noise <- runif(4, min = 0.95, max = 1.05) 
-  p_noisy <- p_E1 * noise  
-  p_E1 <- p_noisy/sum(p_noisy)
-  # calculate the odds ratio
-  exp(calculate_theta_A(p_C1, p_E1)[1,1])
+  # What is the odds ratio for OR=1 after applying noise 
+    set.seed(1)
+    p_C1 <- uniform_simplex(4)[[1]] 
+    p_E1 <- calc_p_E(p_C1, theta_A = log(1))
+    set.seed(1)
+    # Apply noise
+    noise <- runif(4, min = 0.95, max = 1.05) 
+    p_noisy <- p_E1 * noise  
+    p_E1 <- p_noisy/sum(p_noisy)
+    # calculate the odds ratio
+    exp(calculate_theta_A(p_C1, p_E1)[1,1])
   
   # Apply simulation function
   sim_p_theta <- vary_p_theta(n_pilot = 1000, theta_vec = log(c(seq(0.2, 1, 0.2),1.25, 1.5, 2.5, 4)), cat=4)
@@ -423,10 +437,13 @@
   vary_prob_length_PO <- function(n_pilot = 1000, niter = 10000, r = 1, seed = 1, theta=log(1.8)){
     vec_length<- c(3:14)
     results <- vector(mode = "list", length = length(vec_length))
+    # Iterate over the desired numbers of categories to vary and save simulation result
     for (i in seq_along(vec_length)) {
       set.seed(seed)
+      # Create uniformly distributed control probability vector p_C
       p_C_u <- uniform_simplex(vec_length[i])[[1]]
-      p_E_u <- calc_p_E(p_C_u, theta_A = theta)
+      # Calculate experimental probability with specific treatment effect
+      p_E_u <- calc_p_E(p_C_u, theta_A = theta) # no noise applied this time, to make all simulations comparable
       sim_u <- simulation(p_C_u, p_E_u, n_pilot=n_pilot, niter=niter, r=r)
       results[[i]] <- sim_u
     }
@@ -436,7 +453,7 @@
   # Odds ratio from p_C and p_E
     exp(calculate_theta_A(p_C, p_E)[1,1])
     
-  # Apply simulation function
+  # Apply simulation function with the same odds ratio as p_C and p_E have
   sim_cat_PO <- vary_prob_length_PO(n_pilot = 1000, theta = log(0.4821251))
   
   # Plot simulations
@@ -473,19 +490,24 @@
                             labels=c(1:cat)) 
     p <- as.vector(prop.table(table(samp_df$category)))
       p2 <- calc_p_E(p, theta_A = theta_A)
-      noise <- runif(cat, min = 0.95, max = 1.05) # Add random noise
-      p_noisy <- p2 * noise  # Apply noise and normalize
+      # Add random noise
+      noise <- runif(cat, min = 0.95, max = 1.05) 
+      # Apply noise and normalize
+      p_noisy <- p2 * noise  
       p2 <- p_noisy/sum(p_noisy)
       p2 <- p2/sum(p2)
 
     return(list(p, p2))
   }
+  
   # Simulation function
   vary_norm <- function(n_pilot = 1000, niter = 10000, r = 1, rep = 10, vec_length = 6, theta = NA){
     rep_vec <- c(1:rep)
     results <- vector(mode = "list", length = rep)
+    # calculate the normally distributed probability vectors
     p_C_norm <- normal_vector(cat = vec_length, niter = niter, seed = 1, theta_A = theta)[[1]]
     p_E_norm <- normal_vector(cat = vec_length, niter = niter, seed = 1, theta_A = theta)[[2]]
+    # Iterate over the desired number of repetitions to vary and save simulation result
     for (i in seq_along(1:rep)) {
       set.seed(i)
       sim <- simulation(p_C_norm, p_E_norm, r = r, niter = niter, n_pilot = n_pilot)

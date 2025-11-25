@@ -8,18 +8,25 @@
     results_me <-  c()
     for (i in seq_along(1:iter)) {
       set.seed(i)
+      # Sample a number of categories
       prob_length <- sample(c(3:14), 1)
+      # Sample a treatment effect
       theta <- runif(1, min = 0.1, max = 5)
+      
       print(i)
+      # Generate probability vectors
       p <- generate_two_simplex_vectors(prob_length, log(theta))
       p_C <- p[[1]]
       p_E <- p[[2]]
+      # Apply t-test function
       ttest <- samplesize_ttestord(p_C=p_C, p_E=p_E, alpha, beta, r)
       results_me <- rbind(results_me, ttest$actual_power)
-      
+      # save the difference of means
       del_sig <- calculate_delta_A_sigma(p_C, p_E)
-      results_R <- c(results_R, power.t.test(n=ttest$n_E, delta = del_sig$delta_A, power = NULL,
-                                             sd = del_sig$sigma, alternative = "two.sided", type = "two.sample")$power)
+      results_R <- c(results_R, 
+                     # calculate the t-test with the base r function
+                     power.t.test(n=ttest$n_E, delta = del_sig$delta_A, power = NULL,
+                                  sd = del_sig$sigma, alternative = "two.sided", type = "two.sample")$power)
     }
     return(data.frame("ttestord"=results_me, "R"=results_R)) 
   }
@@ -44,18 +51,25 @@
     results_me <-  c()
     for (i in seq_along(1:iter)) {
       set.seed(i)
+      # Sample a number of categories
       prob_length <- sample(c(3:14), 1)
+      # Sample a treatment effect
       theta <-  runif(1, min = 0.1, max = 5)
+      
       print(i)
+      # Generate probability vectors
       p <- generate_two_simplex_vectors(prob_length, log(theta))
       p_C <- p[[1]]
       p_E <- p[[2]]
+      # Apply t-test function
       ttest <- samplesize_ttestord(p_C=p_C, p_E=p_E, alpha, beta, r)
       results_me <- rbind(results_me, ttest$n_total)
-      
+      # save the difference of means
       del_sig <- calculate_delta_A_sigma(p_C, p_E)
-      results_R <- c(results_R, ceiling(power.t.test(n=NULL, delta = del_sig$delta_A, power = 0.8, sig.level = 0.05,
-                                                     sd = del_sig$sigma, alternative = "two.sided", type = "two.sample")$n)*2)
+      results_R <- c(results_R, 
+                     # Calculate the sample size with the base R function
+                     ceiling(power.t.test(n=NULL, delta = del_sig$delta_A, power = 0.8, sig.level = 0.05,
+                                          sd = del_sig$sigma, alternative = "two.sided", type = "two.sample")$n)*2)
     }
     return(data.frame("ttestord"=results_me, "R"=results_R)) 
   }
@@ -65,6 +79,9 @@
   
   # Mean absolute difference between sample size calculated from this t-test and R base t-test
   mean(abs(sim_comp_ttest_samp$ttestord-sim_comp_ttest_samp$R)) # 0.0386
+  
+  # Percentage of unequal sample size calculations 
+  length(which(sim_comp_ttest_samp$ttestord != sim_comp_ttest_samp$R, arr.ind = TRUE))/nrow(sim_comp_ttest_samp)
   
   # Plot comparison  
   ggplot(data=sim_comp_ttest_samp, aes(x=ttestord, y=R))+
@@ -76,9 +93,6 @@
     xlim(0,100000)+
     theme_bw()
   
-  # Percentage of unequal sample size calculations 
-  length(which(sim_comp_ttest_samp$ttestord != sim_comp_ttest_samp$R, arr.ind = TRUE))/nrow(sim_comp_ttest_samp)
-
 #### Estimation check for the PO method ####
 ### Function to compare theta estimation by White (2023) and true theta
   theta_comparison <- function(comp_iter, r){
@@ -88,14 +102,19 @@
     for (i in seq_along(1:comp_iter)) {
       set.seed(i)
       print(i)
+      # Sample a number of categories
       vec_length <- sample(c(3:14), 1)
+      # Sample a treatment effect
       theta_random <- runif(1, min = 0.1, max = 5)
+      # Generate probability vectors (not generate_two_simplex_vectors because no noise should be applied)
       p_c <- random_simplex(n=vec_length)
       p_e <- calc_p_E(p_C = p_c, theta_A = log(theta_random))
+      # Save true log odds ratio
       theta_results[i,1] <- log(theta_random)
-      # White method
+      # Calculate log odds ratio White method
       theta_results[i,2] <- calculate_theta_A(p_c, p_e, r)[1,1]
     }
+    # Calculate the absolute difference between the true and estimated log odds ratio
     theta_results$diff <- abs(theta_results$theta_A - theta_results$est_theta)
     return(theta_results)
   }
@@ -120,25 +139,17 @@
     for (i in seq_along(1:comp_iter)) {
       set.seed(i)
       print(i)
-      
       # Sample the number of categories
       vec_length <- sample(3:14, 1)
-      
       # Sample the odds ratio
       theta_random <- runif(1, min = 0.1, max = 5)
-      
-      # Sample a control vector
+      # Generate probability vectors (not generate_two_simplex_vectors because no noise should be applied)
       p_c_po <- random_simplex(vec_length)
-      
-      # Calculate the experimental vector 
       p_e_po <- calc_p_E(p_c_po, theta_A = log(theta_random))
-      
-      # Save the sampled odds ratio
+      # Save the true log odds ratio
       var_results[i,1] <- theta_random
-      
       # Calculate variance with White method
       var_results[i,2] <- calculate_theta_N(p_c_po, p_e_po, r)[1,2]^2
-      
       # Calculate variance with Kieser method
       x = 0
       for (j in seq_along(1:vec_length)){
@@ -177,20 +188,30 @@
     true_theta_vec <- rep(0,iter)
     for (i in seq_along(1:iter)) {
       set.seed(i)
+      # Sample the number of categories
       prob_length <- sample(3:14, 1)
+      # Sample the treatment effect
       theta_A <- runif(1, 0.1, 5)
+      # Save the true odds ratio
       true_theta_vec[i] <- theta_A
       print(i)
+      # Generate probability vectors (not generate_two_simplex_vectors because no noise should be applied)
       p_C <- random_simplex(prob_length)
       p_E <- calc_p_E(p_C, theta_A = log(theta_A))
+      # Estimate treatment effect with White method and save
       theta_vec[i] <- calculate_theta_A(p_C, p_E)[1,1]
+      # Calculate the sample sizes with the NN method
       results_NN <- rbind(results_NN, as.data.frame(samplesize_po_NN(p_C=p_C, p_E=p_E, alpha, beta, r)))
+      # Calculate the sample size with the AA method
       results_AA <- rbind(results_AA, as.data.frame(samplesize_po_AA(p_C=p_C, p_E=p_E, alpha, beta, r)))
+      # Calculate the sample size with the NA method
       results_NA <- rbind(results_NA, as.data.frame(samplesize_po_NA(p_C=p_C, p_E=p_E, alpha, beta, r)))
+      # Calculate the sample size with the Whitehead method with formula from Kieser
       results_k <- rbind(results_k, as.data.frame(samplesize_po_kieser(p_C=p_C, p_E=p_E, alpha, beta, r)))
     }
     return(list(results_NN, results_k, results_AA, results_NA, results_k_known, theta_vec, true_theta_vec))
   }
+  
   # Apply comparison function
   sim_comp_PO_samp <- comp_PO_samp(iter = 10000)
   
